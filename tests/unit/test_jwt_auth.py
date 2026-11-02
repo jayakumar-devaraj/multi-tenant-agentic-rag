@@ -122,6 +122,24 @@ def test_static_tokens_carry_all_scopes_and_can_be_switched_off(monkeypatch):
         authenticate("static-token")
 
 
+def test_static_tokens_are_off_unless_turned_on(monkeypatch):
+    monkeypatch.delenv("ALLOW_STATIC_TOKENS")
+    with pytest.raises(AuthError):
+        authenticate("static-token")
+    monkeypatch.setenv("ALLOW_STATIC_TOKENS", "TRUE")
+    assert authenticate("static-token").tenant_id == "tenant-s"
+
+
+def test_startup_refuses_a_service_nobody_could_authenticate_to(monkeypatch):
+    monkeypatch.delenv("ALLOW_STATIC_TOKENS")
+    auth.require_a_login_method()  # OIDC is configured in this module
+    monkeypatch.delenv("OIDC_ISSUERS")
+    with pytest.raises(RuntimeError, match="no way to authenticate"):
+        auth.require_a_login_method()
+    monkeypatch.setenv("ALLOW_STATIC_TOKENS", "true")
+    auth.require_a_login_method()
+
+
 def test_without_oidc_configured_only_static_tokens_work(monkeypatch):
     monkeypatch.delenv("OIDC_ISSUERS")
     assert auth.oidc_config() is None

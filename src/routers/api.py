@@ -28,6 +28,7 @@ from src.utils.auth import (
     IdentityProviderUnavailable,
     Session,
     authenticate,
+    require_a_login_method,
 )
 from src.utils.observability import (
     install_request_id_logging,
@@ -312,6 +313,7 @@ def create_app(services: Services) -> FastAPI:
     @asynccontextmanager
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         """Open the pool and verify the migrated schema; an unreachable or unmigrated database fails startup loudly."""
+        require_a_login_method()
         pool = open_pool()
         await pool.open(wait=True)
         try:

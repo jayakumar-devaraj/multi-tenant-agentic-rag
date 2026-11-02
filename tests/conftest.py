@@ -3,11 +3,19 @@
 import hashlib
 import io
 
+import pytest
+
 import docx
 import openpyxl
 import pymupdf
 
 from src.db.connection import EMBEDDING_DIM
+
+
+@pytest.fixture(autouse=True)
+def _static_tokens_on(monkeypatch: pytest.MonkeyPatch) -> None:
+    """The suite authenticates with TENANT_TOKENS, which is opt-in; tests of the default delete it."""
+    monkeypatch.setenv("ALLOW_STATIC_TOKENS", "true")
 
 
 class FakeEmbedder:
