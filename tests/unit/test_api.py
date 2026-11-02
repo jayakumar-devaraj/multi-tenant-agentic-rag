@@ -110,3 +110,28 @@ def test_missing_or_unsafe_request_id_is_replaced(monkeypatch):
     assert len(minted) == 32 and int(minted, 16) >= 0
     unsafe = c.get("/health", headers={"X-Request-ID": "bad id with spaces"}).headers["X-Request-ID"]
     assert unsafe != "bad id with spaces" and len(unsafe) == 32
+
+
+def test_rejections_are_recorded_with_their_status_reason_and_tenant(monkeypatch):
+    """401s carry no tenant; a 403 for a missing scope carries the token's tenant (ADR 0002 addendum)."""
+    from src.utils.auth import SCOPE_QUERY, Session
+
+    seen = []
+
+    async def record(request, status, reason, token, tenant_id=None):
+        seen.append((status, reason, request.url.path, bool(token), tenant_id))
+
+    monkeypatch.setattr("src.routers.api.record_rejection", record)
+    c = _client(monkeypatch)
+    assert c.post("/v1/retrieve", json={"question": "q"}).status_code == 401
+    monkeypatch.setattr("src.routers.api.authenticate",
+                        lambda token: Session(tenant_id="tenant-a", subject="s", scopes=frozenset({SCOPE_QUERY})))
+    assert c.post("/ingest", files={"file": ("r.docx", b"x")}, headers=AUTH).status_code == 403
+    assert seen == [(401, "missing", "/v1/retrieve", False, None),
+                    (403, "missing scope rag:ingest", "/ingest", True, "tenant-a")]
+
+
+def test_a_rejection_that_cannot_be_recorded_is_still_the_same_refusal(monkeypatch):
+    """No pool (here: no lifespan) means the write fails; the caller still gets the 401."""
+    r = _client(monkeypatch).post("/v1/retrieve", json={"question": "q"}, headers={"Authorization": "Bearer x"})
+    assert r.status_code == 401

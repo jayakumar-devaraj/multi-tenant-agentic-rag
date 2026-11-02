@@ -1,6 +1,7 @@
 """HTTP API: /ingest, /chat and /v1/retrieve, tenant bound to the bearer token, 4xx vs 5xx kept distinct."""
 
 import asyncio
+import hashlib
 import logging
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
@@ -112,11 +113,32 @@ router = APIRouter()
 v1 = APIRouter(prefix="/v1")
 
 
-def get_session(creds: Annotated[HTTPAuthorizationCredentials | None, Depends(_bearer)]) -> Session:
-    """Authenticate the bearer token; the Session's tenant is the only tenant any query sees."""
+async def record_rejection(request: Request, status: int, reason: str, token: str | None,
+                           tenant_id: str | None = None) -> None:
+    """Append one row to `auth_rejections` (migration 0005): which credential kind, a fingerprint of it
+    (never the credential), the path and the reason. A failed write is logged and never changes the
+    refusal the caller gets."""
+    credential = "none" if not token else ("jwt" if token.count(".") == 2 else "static")
+    fingerprint = hashlib.sha256(token.encode()).hexdigest()[:16] if token else None
     try:
-        return authenticate(creds.credentials if creds else None)
+        async with request.app.state.pool.connection() as conn:
+            await conn.execute(
+                "INSERT INTO auth_rejections (status, reason, path, credential, fingerprint, tenant_id, client, "
+                "request_id) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)",
+                (status, reason[:200], request.url.path, credential, fingerprint, tenant_id,
+                 request.client.host if request.client else None, request_id.get()))
+    except (psycopg.Error, AttributeError) as exc:  # no pool (startup failed) is the AttributeError
+        log.error("rejection_not_recorded", extra={"status": status, "error": type(exc).__name__})
+
+
+async def get_session(request: Request,
+                      creds: Annotated[HTTPAuthorizationCredentials | None, Depends(_bearer)]) -> Session:
+    """Authenticate the bearer token; the Session's tenant is the only tenant any query sees."""
+    token = creds.credentials if creds else None
+    try:
+        return authenticate(token)
     except AuthError as exc:
+        await record_rejection(request, 401, "missing" if not token else str(exc), token)
         raise HTTPException(401, str(exc), headers={"WWW-Authenticate": "Bearer"}) from exc
     except IdentityProviderUnavailable as exc:
         raise HTTPException(503, "identity provider unavailable") from exc
@@ -125,8 +147,11 @@ def get_session(creds: Annotated[HTTPAuthorizationCredentials | None, Depends(_b
 def require_scope(scope: str) -> Any:
     """A dependency that authenticates, then requires `scope` (403 when the token lacks it)."""
 
-    def dependency(session: Annotated[Session, Depends(get_session)]) -> Session:
+    async def dependency(request: Request, session: Annotated[Session, Depends(get_session)],
+                         creds: Annotated[HTTPAuthorizationCredentials | None, Depends(_bearer)]) -> Session:
         if scope not in session.scopes:
+            await record_rejection(request, 403, f"missing scope {scope}", creds.credentials if creds else None,
+                                   tenant_id=session.tenant_id)
             raise HTTPException(403, f"token lacks the {scope} scope")
         return session
 

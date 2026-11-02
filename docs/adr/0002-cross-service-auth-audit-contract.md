@@ -139,3 +139,10 @@ deployment that sets nothing accepts JWTs only, and the service refuses to start
 static tokens are configured (`require_a_login_method`, in the lifespan) instead of answering 401 to
 every call. Local development without an identity provider sets `ALLOW_STATIC_TOKENS=true`; so does
 the chatbot's compose profile `rag` until its worker presents JWTs.
+
+**Addendum 2026-11-02: rejected requests are recorded.** A 401 has no tenant, so it cannot go into the
+per-tenant `audit_log`. Every 401 and 403 now appends a row to `auth_rejections` (migration 0005): status,
+reason, path, credential kind (`none`, `static`, `jwt`), a SHA-256 fingerprint of the credential (never the
+credential), the tenant when known (a 403 for a missing scope), client address and request id. The table
+sits outside row-level security; the app role may only INSERT, so a tenant cannot read other callers'
+failures and the API cannot rewrite them. A failed write is logged and never changes the refusal.

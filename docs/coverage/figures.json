@@ -1,6 +1,6 @@
 {
-  "tests": 142,
-  "integration_tests": 41,
+  "tests": 145,
+  "integration_tests": 42,
   "coverage": {
     "percent": 92,
     "statements": 906,

@@ -13,7 +13,7 @@ EMBEDDING_DIM = 384
 CONNECT_TIMEOUT_S = 5
 POOL_MAX_SIZE = 10  # per API replica; Postgres allows 100 connections by default
 # The Alembic head this code was written against; a unit test keeps it equal to migrations/versions.
-EXPECTED_SCHEMA_REVISION = "0004"
+EXPECTED_SCHEMA_REVISION = "0005"
 
 
 def database_url() -> str:
