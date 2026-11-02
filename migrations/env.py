@@ -14,6 +14,8 @@ REVOKE ALL ON audit_log FROM {role};
 GRANT SELECT, INSERT ON audit_log TO {role};
 GRANT SELECT ON alembic_version TO {role};
 GRANT SELECT, INSERT, UPDATE, DELETE ON tenant_usage TO {role};
+REVOKE ALL ON auth_rejections FROM {role};
+GRANT INSERT ON auth_rejections TO {role};
 GRANT USAGE ON ALL SEQUENCES IN SCHEMA public TO {role};
 """
 
