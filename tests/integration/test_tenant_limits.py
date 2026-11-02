@@ -80,7 +80,11 @@ def test_a_new_document_past_the_quota_is_refused_and_rolled_back(monkeypatch, t
     async def held() -> int:
         conn = await connect(tenant)
         try:
-            row = await (await conn.execute("SELECT count(DISTINCT doc_key) FROM page_registry")).fetchone()
+            row = await (
+                await conn.execute(
+                    "SELECT count(DISTINCT doc_key) FROM page_registry WHERE tenant_id = %s", (tenant,)
+                )
+            ).fetchone()
             return row[0]
         finally:
             await conn.close()

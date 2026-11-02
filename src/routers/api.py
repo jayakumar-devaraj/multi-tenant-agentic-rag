@@ -351,7 +351,6 @@ def create_app(services: Services) -> FastAPI:
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         """Open the pool and verify the migrated schema; an unreachable or unmigrated database fails startup loudly."""
         require_a_login_method()
-        app.state.limits = Limits.from_env()  # a limit below 1 fails startup
         pool = open_pool()
         await pool.open(wait=True)
         try:
@@ -364,6 +363,7 @@ def create_app(services: Services) -> FastAPI:
             await pool.close()
 
     app = FastAPI(title="multi-tenant-agentic-rag", lifespan=lifespan)
+    app.state.limits = Limits.from_env()  # a limit below 1 fails before the app serves anything
     install_request_id_logging()
 
     @app.middleware("http")
