@@ -3,8 +3,8 @@
 Two kinds of token are accepted (ADR 0002):
 - a signed JWT from an OIDC provider, when OIDC_ISSUERS, OIDC_AUDIENCE and OIDC_JWKS_URL are set: the
   tenant, subject and scopes come from its claims;
-- a static token from TENANT_TOKENS ("token:tenant,..."), during migration only: it carries every
-  scope. ALLOW_STATIC_TOKENS=false turns it off.
+- a static token from TENANT_TOKENS ("token:tenant,..."), only with ALLOW_STATIC_TOKENS=true (local
+  development and migration): it carries every scope. Off by default.
 
 A token shaped like a JWT is validated as a JWT whenever OIDC is configured; an unreachable key set is
 an infrastructure error (503), never a reason to fall back to a static token.
@@ -135,8 +135,17 @@ def _token_table() -> dict[str, str]:
 
 
 def static_tokens_allowed() -> bool:
-    """Static tokens are accepted unless ALLOW_STATIC_TOKENS is set to false."""
-    return os.environ.get("ALLOW_STATIC_TOKENS", "true").strip().lower() != "false"
+    """Static tokens are accepted only when ALLOW_STATIC_TOKENS is true (opt-in)."""
+    return os.environ.get("ALLOW_STATIC_TOKENS", "false").strip().lower() == "true"
+
+
+def require_a_login_method() -> None:
+    """Fail startup when no request could authenticate: neither OIDC nor static tokens."""
+    if oidc_config() is None and not static_tokens_allowed():
+        raise RuntimeError(
+            "no way to authenticate: set OIDC_ISSUERS, OIDC_AUDIENCE and OIDC_JWKS_URL, "
+            "or ALLOW_STATIC_TOKENS=true with TENANT_TOKENS"
+        )
 
 
 def authenticate(token: str | None, keys: KeyResolver | None = None) -> Session:

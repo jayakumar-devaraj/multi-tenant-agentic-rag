@@ -133,3 +133,9 @@ cache). If they cannot be fetched the API answers 503 and does not try a static 
 configuration change plus deleting the variable once the chatbot presents JWTs. Verified with generated
 keys and a real local JWKS endpoint over HTTP; no real identity provider (for example Keycloak) has been
 run against it.
+
+**Addendum 2026-11-02: static tokens are opt-in.** `ALLOW_STATIC_TOKENS` now defaults to false, so a
+deployment that sets nothing accepts JWTs only, and the service refuses to start when neither OIDC nor
+static tokens are configured (`require_a_login_method`, in the lifespan) instead of answering 401 to
+every call. Local development without an identity provider sets `ALLOW_STATIC_TOKENS=true`; so does
+the chatbot's compose profile `rag` until its worker presents JWTs.
