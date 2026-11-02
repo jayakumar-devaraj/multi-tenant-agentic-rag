@@ -21,6 +21,7 @@ from src.ingestion.pipeline import Embedder, IngestResult, ingest_file
 from src.ingestion.workers import UnsupportedFormatError, worker_for
 from src.orchestration.graph import build_graph
 from src.retrieval.hybrid import ParentSection, retrieve
+from src.utils.limits import Limits, QuotaExceeded, RateLimited, documents_held, take
 from src.utils.auth import (
     SCOPE_INGEST,
     SCOPE_QUERY,
@@ -158,6 +159,29 @@ async def _tenant_tx(request: Request, tenant_id: str) -> AsyncIterator[psycopg.
         raise
 
 
+async def _rate_limit(request: Request, session: Session, bucket: str, action: Action) -> None:
+    """Count this call against the tenant's per-minute limit, in its own committed transaction, so rejected
+    calls count too; over the limit is 429 with Retry-After and an audit row with outcome `denied`."""
+    limits: Limits = request.app.state.limits
+    try:
+        async with _tenant_tx(request, session.tenant_id) as conn:
+            await take(conn, session.tenant_id, bucket, limits.per_min(bucket))  # type: ignore[arg-type]
+    except RateLimited as exc:
+        await _audit_denied(request, session, action, "rate_limited")
+        raise HTTPException(429, str(exc), headers={"Retry-After": str(exc.retry_after_s)}) from exc
+    except psycopg.OperationalError as exc:
+        raise HTTPException(503, "database unavailable") from exc
+
+
+async def _audit_denied(request: Request, session: Session, action: Action, reason: str) -> None:
+    """Record a call refused by a limit or quota; never masks the refusal itself."""
+    try:
+        async with _tenant_tx(request, session.tenant_id) as conn:
+            await record_audit(conn, session, action, "denied", detail={"reason": reason})
+    except psycopg.Error:
+        log.error("audit_denied_not_recorded", extra={"action": action, "tenant_id": session.tenant_id})
+
+
 async def _audit_failure(request: Request, session: Session, action: Action, exc: Exception) -> None:
     """Record that an authenticated request failed, in its own transaction (the request's work rolled back);
     this must never mask the failure being reported."""
@@ -181,15 +205,25 @@ async def ingest(request: Request, file: UploadFile, session: Annotated[Session,
     data = await file.read(MAX_UPLOAD_BYTES + 1)
     if len(data) > MAX_UPLOAD_BYTES:
         raise HTTPException(413, "file too large")
+    await _rate_limit(request, session, "ingest", "ingest")
     filename = file.filename or "upload"
+    max_documents = request.app.state.limits.max_documents
     try:
-        # One transaction: the document's pages and its audit row commit or roll back together.
+        # One transaction: the document's pages and its audit row commit or roll back together, and a new
+        # document that takes the tenant past its quota rolls back with them.
         async with _tenant_tx(request, session.tenant_id) as conn:
+            held = await documents_held(conn, session.tenant_id)
             result = await ingest_file(conn, services.embedder, session.tenant_id, filename, data)
+            after = await documents_held(conn, session.tenant_id)
+            if after > held and after > max_documents:
+                raise QuotaExceeded(f"document quota reached ({max_documents})")
             await record_audit(conn, session, "ingest", "ok", doc_key=result.doc_key,
                                detail={"filename": filename, "units": len(result.units),
                                        "purged_pages": result.purged_pages})
         return result
+    except QuotaExceeded as exc:
+        await _audit_denied(request, session, "ingest", "document_quota")
+        raise HTTPException(429, str(exc)) from exc
     except psycopg.OperationalError as exc:
         raise HTTPException(503, "database unavailable") from exc
     except PROVIDER_ERRORS as exc:
@@ -216,6 +250,7 @@ async def chat(request: Request, body: ChatRequest, session: Annotated[Session, 
     """Answer a question from the caller's tenant only, via the self-correcting graph."""
     if services.llm is None or services.embedder is None:
         raise HTTPException(503, "no LLM/embedding provider configured")
+    await _rate_limit(request, session, "query", "chat")
     try:
         graph = build_graph(_retriever(request, services, session), services.llm)
         state = await graph.ainvoke({"question": body.question, "pending_queries": [body.question]},
@@ -249,6 +284,7 @@ async def chat(request: Request, body: ChatRequest, session: Annotated[Session, 
 
 @v1.post("/retrieve", response_model=RetrieveResponse, operation_id="retrieve", responses={
     401: {"model": ErrorBody, "description": "Missing or unknown bearer token."},
+    429: {"model": ErrorBody, "description": "The tenant's per-minute query limit is used up; retry after `Retry-After` seconds."},
     503: {"model": ErrorBody, "description": "Model provider or database unavailable, or no provider configured."},
     504: {"model": ErrorBody, "description": "Model call timed out, or the caller's deadline elapsed."},
     500: {"description": "Unexpected server error (plain-text body)."},
@@ -263,6 +299,7 @@ async def retrieve_context(
     llm = services.retrieve_llm or services.llm
     if llm is None or services.embedder is None:
         raise HTTPException(503, "no LLM/embedding provider configured")
+    await _rate_limit(request, session, "query", "retrieve")
     timeout_s = x_timeout_ms / 1000 if x_timeout_ms else RETRIEVE_DEFAULT_TIMEOUT_S
     try:
         graph = build_graph(_retriever(request, services, session), llm, retrieve_only=True)
@@ -326,6 +363,7 @@ def create_app(services: Services) -> FastAPI:
             await pool.close()
 
     app = FastAPI(title="multi-tenant-agentic-rag", lifespan=lifespan)
+    app.state.limits = Limits.from_env()  # a limit below 1 fails before the app serves anything
     install_request_id_logging()
 
     @app.middleware("http")
