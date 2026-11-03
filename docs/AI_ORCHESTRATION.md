@@ -33,6 +33,17 @@ Build-process record: one row per merge. Runtime audit trail is separate (applic
 | Validate OIDC JWTs for tenant authentication (ADR 0002 step 4) | files changed (by path): code 2, docs 3, other 4, tests 1 | feat/jwt-validation | #29 | 9c652407 |
 | Generate summary figures from the repo and produce coverage in CI | files changed (by path): docs 3, other 2, tests 1 | docs/figures-and-coverage | #30 | 9c652407 |
 | Replace the coverage report with the CI report and log recent PRs | files changed (by path): docs 4 | docs/freeze-figures | #31 | 9c652407 |
+| Add the orchestration row for the coverage freeze PR | files changed (by path): docs 1 | docs/log-gap-31 | #32 | 9c652407 |
+| Parse uploaded documents off the event loop | files changed (by path): code 1, docs 2, tests 1 | fix/request-path-hardening | #33 | b045e33f |
+| Pool API connections and bind the tenant per transaction | files changed (by path): code 2, docs 5, other 4, tests 3 | perf/pooled-tenant-connections | #34 | b045e33f |
+| Make static tenant tokens opt-in | files changed (by path): code 2, docs 4, other 3, tests 2 | feat/static-tokens-off-by-default | #35 | b045e33f |
+| Limit each tenant's calls per minute and documents held | files changed (by path): code 3, docs 5, other 4, tests 4 | feat/tenant-rate-limits | #36 | b045e33f |
+| Record rejected requests in auth_rejections | files changed (by path): code 2, docs 4, other 3, tests 2 | feat/audit-rejected-requests | #37 | b045e33f |
+| Expose Prometheus request metrics on METRICS_PORT | files changed (by path): code 3, docs 3, other 3, tests 1 | feat/api-metrics | #38 | b045e33f |
+| Version 0.2.0 | files changed (by path): other 2 | chore/release-0.2.0 | #39 | b045e33f |
+| Publish the migrate image alongside the API image on a release tag | files changed (by path): other 2 | ci/publish-migrate-image | #40 | b045e33f |
+| Version 0.2.1 | files changed (by path): other 2 | chore/release-0.2.1 | #41 | b045e33f |
+| Run fastembed on one ONNX Runtime thread | files changed (by path): code 1, docs 3, other 1, tests 1 | perf/fastembed-threads | #42 | b045e33f |
 
 
 
@@ -142,3 +153,11 @@ Docker image and compose change.
   authentication, an append-only Postgres audit trail), proposed then accepted.
 - **#25, #26, #27 (2026-10-28):** migrations and a non-owner API role, audit rows and `GET /audit`, and
   forced row-level security, each with real-Postgres tests.
+- **#33, #34 (2026-10-30):** document parsing moved off the event loop, and a connection pool whose tenant
+  is bound per transaction (`set_config(..., true)`), not per session.
+- **#35, #36, #37 (2026-11-02):** static tenant tokens only with `ALLOW_STATIC_TOKENS=true`, per-tenant
+  limits (`tenant_usage`, migration 0004; 429 on `/v1/retrieve`), and a trail of 401/403 rejections
+  (`auth_rejections`, migration 0005) that stores a fingerprint of the credential, never the credential.
+- **#38–#42 (2026-11-03):** Prometheus request metrics on their own port with no tenant label (ADR 0004);
+  releases v0.2.0 and v0.2.1, the second also publishing the migrate image the chatbot now runs; fastembed
+  on one ONNX Runtime thread (ADR 0005).
