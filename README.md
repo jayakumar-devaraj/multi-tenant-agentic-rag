@@ -27,7 +27,7 @@ Read from `pyproject.toml` / `uv.lock` and the running container.
 - **Model providers (optional):** langchain-groq 1.1.3 (`ChatGroq`, primary chat via `GROQ_API_KEY` + `GROQ_CHAT_MODEL`) with langchain-openai 1.6.6 (`ChatOpenAI`) as the fallback, wrapped by `FallbackLLM`. fastembed 0.8.1 provides local embeddings (`FASTEMBED_MODEL`, which must give 384 dimensions, checked at startup), with OpenAI embeddings used if it is unset. Without a chat model and embeddings, `/ingest` and `/chat` return 503.
 - **Guardrails:** retrieved text sits only in an escaped `<documents>` data block, never in system instructions. LLM output is parsed into Pydantic models (`SufficiencyVerdict`, `Answer`). A numeric-groundedness gate replaces any answer containing numbers absent from the context with the insufficient-data message.
 - **Evaluation:** ragas 0.4.3 computes ContextRelevance, Faithfulness (groundedness) and ResponseRelevancy per answer when a provider is configured; the deterministic numeric groundedness score is always computed. The triad is logged as `chat_answered` and returned in the response.
-- **Observability:** JSON-line logging (`src/utils/observability.py`); each line carries the `request_id` (echoed as the `X-Request-ID` header). langfuse 4.15.6 LangChain callback when `LANGFUSE_PUBLIC_KEY` and `LANGFUSE_SECRET_KEY` are set.
+- **Observability:** JSON-line logging (`src/utils/observability.py`); each line carries the `request_id` (echoed as the `X-Request-ID` header). langfuse 4.15.6 LangChain callback when `LANGFUSE_PUBLIC_KEY` and `LANGFUSE_SECRET_KEY` are set. prometheus-client 0.26.0 serves `rag_api_requests_total{method,route,status}` and `rag_api_request_seconds{method,route}` on `METRICS_PORT` (default 9100); there is no tenant label.
 - **API:** fastapi 0.141.1, served by uvicorn 0.53.0 on a SelectorEventLoop (`uv run python -m src.main`). python-multipart 0.0.32 handles uploads. 401 for a bad token, 413/415/422 for bad input, 503/504 for infrastructure failures. `POST /v1/retrieve` is the versioned retrieval-only endpoint; `RETRIEVE_LLM_MAX_RETRIES` (default 0) sets its provider-client retries, while `/chat` keeps 2.
 - **CI:** GitHub Actions (`.github/workflows/ci.yml`) runs `uv sync --locked` and `uv run pytest` on every push and PR, against a `pgvector/pgvector:pg16` service container. It uses actions/checkout v7.0.1, astral-sh/setup-uv v10.2.0 and uv 0.11.19.
 - **Coverage:** pytest-cov 7.1.0. CI prints a term-missing report; the committed snapshot is `docs/coverage/coverage_report.txt`.
@@ -72,7 +72,7 @@ To run the API as a container instead (non-root, embedding model baked in, healt
 docker compose -p multi-tenant-agentic-rag --env-file .env up -d --build rag-api
 ```
 
-It listens on `RAG_API_PORT` (default 8000) and reaches Postgres over the compose network.
+It listens on `RAG_API_PORT` (default 8000) and reaches Postgres over the compose network. Prometheus metrics are at `http://<HOST>:9100/metrics` (`METRICS_PORT`), bound to the same `HOST` as the API; compose does not publish that port, so only the compose network reaches it from the container.
 
 ## Local development
 

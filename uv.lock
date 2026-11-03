@@ -1,5 +1,5 @@
 version = 1
-revision = 3
+revision = 5
 requires-python = "==3.13.*"
 resolution-markers = [
     "sys_platform == 'win32'",
@@ -563,8 +563,8 @@ name = "httpcore2"
 version = "2.13.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "h11", marker = "sys_platform != 'emscripten'" },
-    { name = "truststore", marker = "sys_platform != 'emscripten'" },
+    { name = "h11" },
+    { name = "truststore" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/cb/f3/1db7aa2bc2524062192bb0e0323969492d1883152a232fe36eea65f4e35c/httpcore2-2.13.1.tar.gz", hash = "sha256:e0aa977abe17e69a3b820a24542a6fa88702676d83880b8d194dcd18408e5103", size = 68071, upload-time = "2026-09-23T07:47:22.372Z" }
 wheels = [
@@ -1120,6 +1120,7 @@ dependencies = [
     { name = "langgraph" },
     { name = "openpyxl" },
     { name = "pgvector" },
+    { name = "prometheus-client" },
     { name = "psycopg", extra = ["binary"] },
     { name = "psycopg-pool" },
     { name = "pydantic" },
@@ -1154,6 +1155,7 @@ requires-dist = [
     { name = "langgraph", specifier = "==1.2.12" },
     { name = "openpyxl", specifier = "==3.1.5" },
     { name = "pgvector", specifier = "==0.5.0" },
+    { name = "prometheus-client", specifier = "==0.26.0" },
     { name = "psycopg", extras = ["binary"], specifier = "==3.3.6" },
     { name = "psycopg-pool", specifier = "==3.3.3" },
     { name = "pydantic", specifier = "==2.13.5" },
@@ -1495,6 +1497,15 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/f9/e2/3e91f31a7d2b083fe6ef3fa267035b518369d9511ffab804f839851d2779/pluggy-1.6.0.tar.gz", hash = "sha256:7dcc130b76258d33b90f61b658791dede3486c3e6bfb003ee5c9bfb396dd22f3", size = 69412, upload-time = "2025-05-15T12:30:07.975Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/54/20/4d324d65cc6d9205fabedc306948156824eb9f0ee1633355a8f7ec5c66bf/pluggy-1.6.0-py3-none-any.whl", hash = "sha256:e920276dd6813095e9377c0bc5566d94c932c33b27a3e3945d8389c374dd4746", size = 20538, upload-time = "2025-05-15T12:30:06.134Z" },
+]
+
+[[package]]
+name = "prometheus-client"
+version = "0.26.0"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/52/73/f1334c29c2af4cd9dba6c7817e61b611bd0215e2eb5565c6064a4de18802/prometheus_client-0.26.0.tar.gz", hash = "sha256:04a91bcf94e2cf74a44a1a874d651a2e853ed354b6e822f3b7487751465d5c2b", size = 92910, upload-time = "2026-07-24T19:36:41.893Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/eb/a3/b69efbf4143b5b9859b977770bbbabcc2796b702fa69dc40271e45cd5a56/prometheus_client-0.26.0-py3-none-any.whl", hash = "sha256:fa93d06737aa02bacd05794768508bb97d2fbee28cb3bca04eaae92f0ca953d6", size = 64494, upload-time = "2026-07-24T19:36:40.854Z" },
 ]
 
 [[package]]
