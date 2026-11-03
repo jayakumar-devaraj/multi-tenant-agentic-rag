@@ -23,6 +23,7 @@ from src.ingestion.workers import UnsupportedFormatError, worker_for
 from src.orchestration.graph import build_graph
 from src.retrieval.hybrid import ParentSection, retrieve
 from src.utils.limits import Limits, QuotaExceeded, RateLimited, documents_held, take
+from src.utils.metrics import MetricsMiddleware
 from src.utils.auth import (
     SCOPE_INGEST,
     SCOPE_QUERY,
@@ -405,6 +406,7 @@ def create_app(services: Services) -> FastAPI:
         response.headers["X-Request-ID"] = rid
         return response
 
+    app.add_middleware(MetricsMiddleware)  # outermost, so a 500 from any layer below is counted
     app.state.services = services
     app.include_router(router)
     app.include_router(v1)

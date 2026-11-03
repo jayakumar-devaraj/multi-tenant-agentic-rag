@@ -6,6 +6,7 @@ import os
 from typing import Any
 
 import uvicorn
+from prometheus_client import start_http_server
 from pydantic import BaseModel
 
 from src.routers.api import Services, create_app
@@ -124,7 +125,9 @@ def main() -> None:
     """Serve the API on a SelectorEventLoop (psycopg async cannot run on Windows' Proactor loop)."""
     configure_logging(os.environ.get("LOG_LEVEL", "INFO"))
     app = create_app(build_services())
-    config = uvicorn.Config(app, host=os.environ.get("HOST", "127.0.0.1"), port=int(os.environ.get("PORT", "8000")))
+    host = os.environ.get("HOST", "127.0.0.1")
+    start_http_server(int(os.environ.get("METRICS_PORT", "9100")), addr=host)  # Prometheus, on its own port
+    config = uvicorn.Config(app, host=host, port=int(os.environ.get("PORT", "8000")))
     asyncio.run(uvicorn.Server(config).serve(), loop_factory=asyncio.SelectorEventLoop)
 
 
