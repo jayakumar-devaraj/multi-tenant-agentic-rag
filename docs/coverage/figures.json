@@ -2,8 +2,8 @@
   "tests": 149,
   "integration_tests": 42,
   "coverage": {
-    "percent": 92,
-    "statements": 906,
-    "source": "Coverage at 1a75804 from CI run 40926258798 (all tests except live):"
+    "percent": 93,
+    "statements": 1039,
+    "source": "Coverage at 648df6f from CI run 41713944813 (all tests except live):"
   }
 }

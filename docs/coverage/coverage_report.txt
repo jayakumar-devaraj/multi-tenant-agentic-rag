@@ -1,6 +1,7 @@
-Coverage at 1a75804 from CI run 40926258798 (all tests except live):
-........................................................................ [ 55%]
-.........................................................                [100%]
+Coverage at 648df6f from CI run 41713944813 (all tests except live):
+........................................................................ [ 48%]
+........................................................................ [ 96%]
+.....                                                                    [100%]
 ================================ tests coverage ================================
 _______________ coverage: platform linux, python 3.13.13-final-0 _______________
 
@@ -10,27 +11,29 @@ src/agents/__init__.py              0      0   100%
 src/agents/synthesis.py            33      0   100%
 src/db/__init__.py                  0      0   100%
 src/db/audit.py                    24      0   100%
-src/db/connection.py               33      4    88%   20, 39-41
+src/db/connection.py               43      4    91%   23, 43-45
 src/db/repository.py               49      0   100%
 src/eval/__init__.py                0      0   100%
 src/eval/triad.py                  60     17    72%   85-105
 src/ingestion/__init__.py           0      0   100%
 src/ingestion/chunking.py          50      1    98%   69
-src/ingestion/pipeline.py          36      0   100%
+src/ingestion/pipeline.py          37      0   100%
 src/ingestion/workers.py           78      1    99%   83
-src/main.py                        75     22    71%   23, 27, 35, 39, 43, 47, 51, 85-91, 93-95, 116-117, 125-128, 132
+src/main.py                        78     19    76%   24, 28, 36, 40, 44, 48, 52, 93, 96-98, 119-120, 128-133, 137
 src/orchestration/__init__.py       0      0   100%
 src/orchestration/graph.py         57      0   100%
 src/orchestration/state.py         11      0   100%
 src/retrieval/__init__.py           0      0   100%
 src/retrieval/hybrid.py            43      0   100%
 src/routers/__init__.py             0      0   100%
-src/routers/api.py                209     17    92%   151-153, 160-161, 176, 188, 217-224, 296-297
+src/routers/api.py                255     20    92%   184-185, 198-199, 207-208, 217-218, 233, 254, 289-296, 363-364
 src/routers/contract.py            27      1    96%   42
 src/tools/__init__.py               0      0   100%
 src/utils/__init__.py               0      0   100%
-src/utils/auth.py                  82      2    98%   111-112
+src/utils/auth.py                  85      2    98%   111-112
+src/utils/limits.py                40      0   100%
+src/utils/metrics.py               30      0   100%
 src/utils/observability.py         39      5    87%   57-59, 69-71
 -------------------------------------------------------------
-TOTAL                             906     70    92%
-129 passed, 3 deselected in 18.64s
+TOTAL                            1039     70    93%
+149 passed, 3 deselected in 23.04s

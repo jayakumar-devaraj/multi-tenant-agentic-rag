@@ -44,6 +44,7 @@ Build-process record: one row per merge. Runtime audit trail is separate (applic
 | Publish the migrate image alongside the API image on a release tag | files changed (by path): other 2 | ci/publish-migrate-image | #40 | b045e33f |
 | Version 0.2.1 | files changed (by path): other 2 | chore/release-0.2.1 | #41 | b045e33f |
 | Run fastembed on one ONNX Runtime thread | files changed (by path): code 1, docs 3, other 1, tests 1 | perf/fastembed-threads | #42 | b045e33f |
+| Log PRs #32-#42 in the orchestration record | files changed (by path): docs 1 | docs/orchestration-log-33-42 | #43 | b045e33f |
 
 
 

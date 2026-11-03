@@ -23,21 +23,26 @@ plain text. Each organisation (tenant) can only ever search its own documents. T
 - **Keeps customers apart twice.** Every query is limited to the caller's organisation in the search
   itself, and the database enforces the same rule, so a missed filter in the code cannot leak data.
 - **Accepts signed tokens** from a company identity provider, with separate rights to search and to
-  upload; the old fixed token list still works until it is switched off.
+  upload; the old fixed token list works only when it is explicitly turned on.
 - **Keeps a durable record of use.** Each upload, search and question writes an audit row, and an
   upload and its record succeed or fail together. A search is never returned without its record.
+  Refused requests are recorded too, with a fingerprint of the credential, never the credential.
+- **Limits each customer.** Calls per minute and documents held are capped per organisation.
+- **Reports its health.** Request counts and latency are exposed for Prometheus, with no per-customer
+  breakdown.
 
 The first version was built on 2026-09-24 in about an hour inside a two-hour window and verified end to
 end against a real AI model (Groq): all three demonstration scenarios gave correct, cited answers and
 every answer was scored for quality. The retrieval endpoint, container image, database migrations,
-audit trail, row-level security and signed tokens were added from 2026-10-25 to 2026-10-29.
+audit trail, row-level security and signed tokens were added from 2026-10-25 to 2026-10-29; connection
+pooling, limits, the record of refused requests, metrics and release v0.2.1 from 2026-10-30 to 2026-11-03.
 
 **Evidence.** The figures below are generated from the repository by `scripts/gen_figures.py`, and CI
 fails when they drift.
 
 <!-- figures:start -->
 - **Tests collected:** 149 (of which 42 need the real Postgres with pgvector); calls to real model providers are a separate, opt-in `live` set.
-- **Coverage:** 92 % of 906 statements. Report header: "Coverage at 1a75804 from CI run 40926258798 (all tests except live)".
+- **Coverage:** 93 % of 1039 statements. Report header: "Coverage at 648df6f from CI run 41713944813 (all tests except live)".
 <!-- figures:end -->
 
 ## The most important trade-off
@@ -51,11 +56,12 @@ does not happen at all. At this stage, correctness was worth more than scale.
 ## Remaining work, in priority order
 
 1. **Run it against a real identity provider.** Signed-token checks are tested with generated keys and
-   a local key endpoint only, and the fixed token list is still accepted by default.
+   a local key endpoint only. The fixed token list is off by default, but the chatbot's compose profile
+   still turns it on.
 2. **Verify monitoring (Langfuse) and the backup AI provider (OpenAI) live.** Both are wired in but
    have never been exercised against a real service.
-3. **Limits and retention.** There are no per-customer rate limits or quotas, and the audit table has
-   no partitioning or retention job.
+3. **Retention.** The audit table has no partitioning or retention job, and limits are approximate at
+   their edges (`docs/known_limitations.md`).
 4. **Improve PDF layout handling** beyond automatic table detection. This was cut for time.
 5. **Plan for scale** if document volume grows past roughly a million fragments.
 6. **Add a deployment target** (the image is published, but nothing deploys it).
