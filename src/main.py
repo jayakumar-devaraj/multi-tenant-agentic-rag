@@ -85,7 +85,9 @@ def _embeddings() -> Any | None:
     if os.environ.get("FASTEMBED_MODEL"):
         from langchain_community.embeddings.fastembed import FastEmbedEmbeddings  # noqa: PLC0415
 
-        embeddings = FastEmbedEmbeddings(model_name=os.environ["FASTEMBED_MODEL"])
+        # One ONNX Runtime thread: by default it starts one per host core, which spin and take CPU from the
+        # event loop; one thread was faster for queries and 16-chunk batches, capped or not (ADR 0005).
+        embeddings = FastEmbedEmbeddings(model_name=os.environ["FASTEMBED_MODEL"], threads=1)
         dim = len(embeddings.embed_query("dimension check"))
         if dim != EMBEDDING_DIM:
             raise RuntimeError(f"FASTEMBED_MODEL yields {dim}-dim vectors; schema requires {EMBEDDING_DIM}")
