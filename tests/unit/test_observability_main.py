@@ -72,3 +72,27 @@ def test_fallback_answers_when_primary_fails():
 
     out = run(FallbackLLM(_Down(), _Up()).with_structured_output(_Out).ainvoke("q"))
     assert out.value == "from fallback"
+
+
+def test_fastembed_runs_on_one_onnx_thread(monkeypatch):
+    """ONNX Runtime's default of one thread per host core wastes CPU (ADR 0005); the embedder gets threads=1."""
+    import langchain_community.embeddings.fastembed as fastembed
+
+    from src.db.connection import EMBEDDING_DIM
+    from src.main import _embeddings
+
+    seen: dict = {}
+
+    class _FakeFastEmbed:
+        """TEST DOUBLE: records its constructor arguments; embeds to the schema's dimension."""
+
+        def __init__(self, **kwargs):
+            seen.update(kwargs)
+
+        def embed_query(self, text):
+            return [0.0] * EMBEDDING_DIM
+
+    monkeypatch.setenv("FASTEMBED_MODEL", "BAAI/bge-small-en-v1.5")
+    monkeypatch.setattr(fastembed, "FastEmbedEmbeddings", _FakeFastEmbed)
+    assert isinstance(_embeddings(), _FakeFastEmbed)
+    assert seen == {"model_name": "BAAI/bge-small-en-v1.5", "threads": 1}
