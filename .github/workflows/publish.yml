@@ -33,3 +33,16 @@ jobs:
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
+      # The schema job a deployment runs before the API (the API refuses an unmigrated database).
+      - id: meta-migrate
+        uses: docker/metadata-action@v6.2.0
+        with:
+          images: ghcr.io/jayakumar-devaraj/multi-tenant-agentic-rag-migrate
+          tags: type=ref,event=tag
+      - uses: docker/build-push-action@v7.4.0
+        with:
+          context: .
+          target: migrate
+          push: true
+          tags: ${{ steps.meta-migrate.outputs.tags }}
+          labels: ${{ steps.meta-migrate.outputs.labels }}
