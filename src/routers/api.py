@@ -236,8 +236,10 @@ async def ingest(request: Request, file: UploadFile, session: Annotated[Session,
     max_documents = request.app.state.limits.max_documents
     try:
         # One transaction: the document's pages and its audit row commit or roll back together, and a new
-        # document that takes the tenant past its quota rolls back with them.
+        # document that takes the tenant past its quota rolls back with them. The lock makes the tenant's ingests
+        # run one at a time, so a parallel ingest cannot pass the check on a count that misses this document.
         async with _tenant_tx(request, session.tenant_id) as conn:
+            await conn.execute("SELECT pg_advisory_xact_lock(hashtext(%s))", (session.tenant_id,))
             held = await documents_held(conn, session.tenant_id)
             result = await ingest_file(conn, services.embedder, session.tenant_id, filename, data)
             after = await documents_held(conn, session.tenant_id)

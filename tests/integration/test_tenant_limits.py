@@ -4,6 +4,7 @@ import asyncio
 import sys
 from datetime import UTC, datetime, timedelta
 
+import httpx
 import pytest
 from fastapi.testclient import TestClient
 
@@ -90,3 +91,47 @@ def test_a_new_document_past_the_quota_is_refused_and_rolled_back(monkeypatch, t
             await conn.close()
 
     assert run(held()) == 1  # the refused document left nothing behind
+
+
+class _SlowEmbedder(FakeEmbedder):
+    """TEST DOUBLE: holds each ingest's transaction open long enough for parallel ingests to overlap."""
+
+    async def embed(self, texts: list[str]) -> list[list[float]]:
+        await asyncio.sleep(0.3)
+        return await super().embed(texts)
+
+
+def test_parallel_ingests_at_the_cap_never_exceed_the_quota(monkeypatch, tenant):
+    cap, parallel = 2, 6
+    monkeypatch.setenv("TENANT_TOKENS", f"tok-a:{tenant}")
+    monkeypatch.setenv("TENANT_MAX_DOCUMENTS", str(cap))
+    monkeypatch.setenv("RATE_LIMIT_INGEST_PER_MIN", "100")
+    a = {"Authorization": "Bearer tok-a"}
+    app = create_app(Services(embedder=_SlowEmbedder(), llm=ScriptedLLM(), triad=None))
+
+    async def go() -> tuple[list[int], int]:
+        # One event loop and asyncio.gather: TestClient from threads did not overlap the requests.
+        async with app.router.lifespan_context(app), httpx.AsyncClient(
+            transport=httpx.ASGITransport(app=app), base_url="http://test", timeout=60
+        ) as client:
+
+            async def upload(name: str) -> int:
+                body = f"Distinct content of {name}.".encode()
+                return (await client.post("/ingest", files={"file": (f"{name}.txt", body)}, headers=a)).status_code
+
+            assert await upload("first") == 200  # one document held, room for exactly one more
+            statuses = await asyncio.gather(*(upload(f"doc-{i}") for i in range(parallel)))
+        conn = await connect(tenant)
+        try:
+            row = await (
+                await conn.execute(
+                    "SELECT count(DISTINCT doc_key) FROM page_registry WHERE tenant_id = %s", (tenant,)
+                )
+            ).fetchone()
+            return list(statuses), row[0]
+        finally:
+            await conn.close()
+
+    statuses, held = run(go())
+    assert held == cap
+    assert sorted(statuses) == [200] + [429] * (parallel - 1)
