@@ -104,6 +104,6 @@ cannot be given markers. Keep adding trailers or a session manifest from now on.
 
 ## 3. Expected effect
 
-Items 1.1 to 1.4 are worth about +3 to +4 rubric points (78 to about 81-82). Items 1.5 and 1.6 are
+Estimate, not a measurement: items 1.1 to 1.4 are worth about +3 to +4 rubric points (78 to about 81-82). Items 1.5 and 1.6 are
 product evidence and are worth little on the rubric. The remaining points depend on provenance that
 cannot be added to past commits.
