@@ -24,8 +24,10 @@ XLSX = make_xlsx({"Q1": [["Region", "Sales"], ["North", 100]], "Q2": [["Region",
 
 
 def _llm(*, sufficient: bool = True) -> ScriptedLLM:
-    return ScriptedLLM(SufficiencyVerdict=[SufficiencyVerdict(sufficient=sufficient)] * 3,
-                       Answer=[Answer(answer="North sales were 100.")] * 3)
+    return ScriptedLLM(
+        SufficiencyVerdict=[SufficiencyVerdict(sufficient=sufficient)] * 3,
+        Answer=[Answer(answer="North sales were 100.")] * 3,
+    )
 
 
 def _app(llm=None, embedder=None) -> TestClient:
@@ -94,8 +96,9 @@ def test_no_audit_row_means_ingest_is_rolled_back(monkeypatch, tenant):
         raise psycopg.errors.InsufficientPrivilege("denied")
 
     monkeypatch.setattr("src.routers.api.record_audit", failing_audit)
-    with TestClient(create_app(Services(embedder=FakeEmbedder(), llm=_llm(), triad=None)),
-                    raise_server_exceptions=False) as client:
+    with TestClient(
+        create_app(Services(embedder=FakeEmbedder(), llm=_llm(), triad=None)), raise_server_exceptions=False
+    ) as client:
         assert client.post("/ingest", files={"file": ("s.xlsx", XLSX)}, headers=A).status_code == 500
     assert run(_count(database_url(), "SELECT count(*) FROM page_registry WHERE tenant_id = %s", tenant)) == 0
 

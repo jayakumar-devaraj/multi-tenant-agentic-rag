@@ -46,8 +46,12 @@ class JsonFormatter(logging.Formatter):
 
     def format(self, record: logging.LogRecord) -> str:
         """Serialize a record."""
-        payload = {"ts": self.formatTime(record), "level": record.levelname, "logger": record.name,
-                   "event": record.getMessage()}
+        payload = {
+            "ts": self.formatTime(record),
+            "level": record.levelname,
+            "logger": record.name,
+            "event": record.getMessage(),
+        }
         payload.update({k: v for k, v in vars(record).items() if k not in _RESERVED})
         return json.dumps(payload, default=str)
 

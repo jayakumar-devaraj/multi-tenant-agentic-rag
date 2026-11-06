@@ -43,10 +43,16 @@ class FakeKeys:
 
 def token(key=KEY, alg="RS256", **claims) -> str:
     now = int(time.time())
-    body = {"iss": ISSUER, "aud": AUDIENCE, "sub": "svc-chatbot", "tenant": "tenant-a",
-            "scope": "rag:query", "iat": now, "exp": now + 300} | claims
-    return jwt.encode({k: v for k, v in body.items() if v is not None}, key, algorithm=alg,
-                      headers={"kid": "k1"})
+    body = {
+        "iss": ISSUER,
+        "aud": AUDIENCE,
+        "sub": "svc-chatbot",
+        "tenant": "tenant-a",
+        "scope": "rag:query",
+        "iat": now,
+        "exp": now + 300,
+    } | claims
+    return jwt.encode({k: v for k, v in body.items() if v is not None}, key, algorithm=alg, headers={"kid": "k1"})
 
 
 @pytest.fixture(autouse=True)
@@ -68,10 +74,18 @@ def test_scopes_may_arrive_as_a_scp_list():
     assert s.scopes == {"rag:ingest"}
 
 
-@pytest.mark.parametrize("claims", [
-    {"iss": "https://evil.example"}, {"aud": "someone-else"}, {"exp": int(time.time()) - 3600},
-    {"sub": None}, {"tenant": None}, {"tenant": "  "}, {"tenant": 7},
-])
+@pytest.mark.parametrize(
+    "claims",
+    [
+        {"iss": "https://evil.example"},
+        {"aud": "someone-else"},
+        {"exp": int(time.time()) - 3600},
+        {"sub": None},
+        {"tenant": None},
+        {"tenant": "  "},
+        {"tenant": 7},
+    ],
+)
 def test_invalid_claims_are_rejected(claims):
     with pytest.raises(AuthError):
         authenticate(token(**claims), FakeKeys())
@@ -83,9 +97,16 @@ def test_a_token_signed_by_another_key_is_rejected():
 
 
 def test_unsigned_and_symmetric_tokens_are_rejected():
-    unsigned = ".".join(base64.urlsafe_b64encode(json.dumps(p).encode()).rstrip(b"=").decode()
-                        for p in ({"alg": "none", "typ": "JWT"}, {"iss": ISSUER, "aud": AUDIENCE,
-                                  "sub": "x", "tenant": "t", "exp": int(time.time()) + 300})) + "."
+    unsigned = (
+        ".".join(
+            base64.urlsafe_b64encode(json.dumps(p).encode()).rstrip(b"=").decode()
+            for p in (
+                {"alg": "none", "typ": "JWT"},
+                {"iss": ISSUER, "aud": AUDIENCE, "sub": "x", "tenant": "t", "exp": int(time.time()) + 300},
+            )
+        )
+        + "."
+    )
     with pytest.raises(AuthError):
         authenticate(unsigned, FakeKeys())
     public_pem = KEY.public_key().public_bytes(
@@ -93,8 +114,11 @@ def test_unsigned_and_symmetric_tokens_are_rejected():
     )
     signing_input = ".".join(
         base64.urlsafe_b64encode(json.dumps(p).encode()).rstrip(b"=").decode()
-        for p in ({"alg": "HS256", "typ": "JWT"}, {"iss": ISSUER, "aud": AUDIENCE, "sub": "x",
-                  "tenant": "t", "exp": int(time.time()) + 300}))
+        for p in (
+            {"alg": "HS256", "typ": "JWT"},
+            {"iss": ISSUER, "aud": AUDIENCE, "sub": "x", "tenant": "t", "exp": int(time.time()) + 300},
+        )
+    )
     mac = hmac.new(public_pem, signing_input.encode(), hashlib.sha256).digest()
     forged = signing_input + "." + base64.urlsafe_b64encode(mac).rstrip(b"=").decode()
     with pytest.raises(AuthError):  # algorithm confusion: HS256 "signed" with the public key
@@ -158,8 +182,7 @@ def test_api_maps_auth_failures_to_401_403_and_503(monkeypatch):
     assert c.post("/v1/retrieve", json={"question": "q"}, headers=bearer("junk.jwt.shape")).status_code == 401
     # a query-only token may not ingest; an ingest-only token may not query
     assert c.post("/ingest", files={"file": ("a.txt", b"x")}, headers=bearer(token())).status_code == 403
-    assert c.post("/v1/retrieve", json={"question": "q"},
-                  headers=bearer(token(scope="rag:ingest"))).status_code == 403
+    assert c.post("/v1/retrieve", json={"question": "q"}, headers=bearer(token(scope="rag:ingest"))).status_code == 403
     c = _client(monkeypatch, FakeKeys(error=jwt.PyJWKClientConnectionError("down")))
     r = c.post("/v1/retrieve", json={"question": "q"}, headers=bearer(token()))
     assert r.status_code == 503 and r.json()["detail"] == "identity provider unavailable"

@@ -33,7 +33,9 @@ async def _load(url: str, tenants: int, per_tenant: int, rng: random.Random) -> 
         for t in range(tenants):
             cur = await c.execute(
                 "INSERT INTO page_registry (tenant_id, doc_key, page_key, sha256, source_name, markdown) "
-                "VALUES (%s, 'd', 'p', %s, 's', 'm') RETURNING id", (f"t{t}", f"{t:064x}"))
+                "VALUES (%s, 'd', 'p', %s, 's', 'm') RETURNING id",
+                (f"t{t}", f"{t:064x}"),
+            )
             page_id = (await cur.fetchone())[0]
             async with c.cursor().copy("COPY chunks (tenant_id, page_id, ord, content, embedding) FROM STDIN") as cp:
                 for i in range(per_tenant):
@@ -75,10 +77,13 @@ async def main() -> None:
             app_url = with_credentials(owner_url, role, password)
             await _load(owner_url, a.tenants, a.per_tenant, rng)
             no_predicate = _HYBRID_SQL.replace("WHERE tenant_id = %(tenant)s", "").replace(
-                "c.tenant_id = %(tenant)s AND ", "")
-            cases = [("owner (RLS bypassed), tenant predicate", owner_url, _HYBRID_SQL),
-                     ("app role, RLS + tenant predicate (production)", app_url, _HYBRID_SQL),
-                     ("app role, RLS only (predicate removed)", app_url, no_predicate)]
+                "c.tenant_id = %(tenant)s AND ", ""
+            )
+            cases = [
+                ("owner (RLS bypassed), tenant predicate", owner_url, _HYBRID_SQL),
+                ("app role, RLS + tenant predicate (production)", app_url, _HYBRID_SQL),
+                ("app role, RLS only (predicate removed)", app_url, no_predicate),
+            ]
             print(f"{a.tenants * a.per_tenant} chunks, {a.tenants} tenants, {a.runs} queries per case\n")
             print("| case | p50 ms | p95 ms | mean rows returned |\n|---|---|---|---|")
             for label, url, sql in cases:

@@ -74,7 +74,9 @@ def _chat_models(max_retries: int = 2) -> list[Any]:
     if os.environ.get("OPENAI_API_KEY") and os.environ.get("OPENAI_CHAT_MODEL"):
         from langchain_openai import ChatOpenAI
 
-        models.append(ChatOpenAI(model=os.environ["OPENAI_CHAT_MODEL"], timeout=CHAT_TIMEOUT_S, max_retries=max_retries))
+        models.append(
+            ChatOpenAI(model=os.environ["OPENAI_CHAT_MODEL"], timeout=CHAT_TIMEOUT_S, max_retries=max_retries)
+        )
     return models
 
 
@@ -108,8 +110,14 @@ def build_services() -> Services:
 
     chats, embeddings = _chat_models(), _embeddings()
     if not chats or embeddings is None:
-        log.warning("providers_unconfigured", extra={"chat": bool(chats), "embeddings": embeddings is not None,
-                                                     "needs": "GROQ_* or OPENAI_* chat; FASTEMBED_MODEL or OPENAI_* embeddings"})
+        log.warning(
+            "providers_unconfigured",
+            extra={
+                "chat": bool(chats),
+                "embeddings": embeddings is not None,
+                "needs": "GROQ_* or OPENAI_* chat; FASTEMBED_MODEL or OPENAI_* embeddings",
+            },
+        )
     llm = FallbackLLM(chats[0], chats[1] if len(chats) > 1 else None) if chats else None
     # /v1/retrieve callers own the retry policy, so its models retry inside the provider client far less than /chat's
     lean = _chat_models(int(os.environ.get("RETRIEVE_LLM_MAX_RETRIES", "0")))
@@ -119,8 +127,12 @@ def build_services() -> Services:
         name = getattr(embeddings, "model_name", None) or getattr(embeddings, "model", "")
         named = _NamedEmbeddings(embeddings, str(name))
     triad = RagasTriadScorer(chats[0], named) if chats and named is not None else None
-    return Services(embedder=_LangchainEmbedder(embeddings) if embeddings is not None else None, llm=llm, triad=triad,
-                    retrieve_llm=retrieve_llm)
+    return Services(
+        embedder=_LangchainEmbedder(embeddings) if embeddings is not None else None,
+        llm=llm,
+        triad=triad,
+        retrieve_llm=retrieve_llm,
+    )
 
 
 def main() -> None:

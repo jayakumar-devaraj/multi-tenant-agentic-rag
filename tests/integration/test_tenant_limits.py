@@ -52,8 +52,9 @@ def test_retrieve_over_the_limit_is_429_with_retry_after_and_audited(monkeypatch
     monkeypatch.setenv("RATE_LIMIT_QUERY_PER_MIN", "1")
     a = {"Authorization": "Bearer tok-a"}
     lean = ScriptedLLM(SufficiencyVerdict=[SufficiencyVerdict(sufficient=True)])
-    with TestClient(create_app(Services(embedder=FakeEmbedder(), llm=ScriptedLLM(), triad=None,
-                                        retrieve_llm=lean))) as client:
+    with TestClient(
+        create_app(Services(embedder=FakeEmbedder(), llm=ScriptedLLM(), triad=None, retrieve_llm=lean))
+    ) as client:
         assert client.post("/v1/retrieve", json={"question": "q"}, headers=a).status_code == 200
         r = client.post("/v1/retrieve", json={"question": "q"}, headers=a)
         assert r.status_code == 429
@@ -81,9 +82,7 @@ def test_a_new_document_past_the_quota_is_refused_and_rolled_back(monkeypatch, t
         conn = await connect(tenant)
         try:
             row = await (
-                await conn.execute(
-                    "SELECT count(DISTINCT doc_key) FROM page_registry WHERE tenant_id = %s", (tenant,)
-                )
+                await conn.execute("SELECT count(DISTINCT doc_key) FROM page_registry WHERE tenant_id = %s", (tenant,))
             ).fetchone()
             return row[0]
         finally:

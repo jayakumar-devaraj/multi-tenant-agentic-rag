@@ -11,8 +11,9 @@ from src.utils.observability import JsonFormatter, trace_callbacks
 
 
 def test_json_log_line_carries_extra_fields():
-    record = logging.makeLogRecord({"name": "audit", "levelname": "INFO", "msg": "page_written",
-                                    "tenant_id": "acme", "status": "replaced"})
+    record = logging.makeLogRecord(
+        {"name": "audit", "levelname": "INFO", "msg": "page_written", "tenant_id": "acme", "status": "replaced"}
+    )
     line = json.loads(JsonFormatter().format(record))
     assert line["event"] == "page_written" and line["tenant_id"] == "acme" and line["status"] == "replaced"
 
@@ -23,8 +24,14 @@ def test_tracing_disabled_without_langfuse_keys(monkeypatch):
     assert trace_callbacks() == []
 
 
-PROVIDER_VARS = ("GROQ_API_KEY", "GROQ_CHAT_MODEL", "OPENAI_API_KEY", "OPENAI_CHAT_MODEL",
-                 "OPENAI_EMBEDDING_MODEL", "FASTEMBED_MODEL")
+PROVIDER_VARS = (
+    "GROQ_API_KEY",
+    "GROQ_CHAT_MODEL",
+    "OPENAI_API_KEY",
+    "OPENAI_CHAT_MODEL",
+    "OPENAI_EMBEDDING_MODEL",
+    "FASTEMBED_MODEL",
+)
 
 
 def _clear_providers(monkeypatch):

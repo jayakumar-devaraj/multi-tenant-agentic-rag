@@ -77,7 +77,9 @@ class RagasTriadScorer:
         self._metrics = {
             "context_relevance": m.ContextRelevance(llm=rllm),
             "groundedness": m.Faithfulness(llm=rllm),
-            "answer_relevance": m.ResponseRelevancy(llm=rllm, embeddings=remb, strictness=1),  # n>1 generations hang on Groq
+            "answer_relevance": m.ResponseRelevancy(
+                llm=rllm, embeddings=remb, strictness=1
+            ),  # n>1 generations hang on Groq
         }
 
     async def __call__(self, question: str, answer: str, contexts: list[str]) -> TriadScores:

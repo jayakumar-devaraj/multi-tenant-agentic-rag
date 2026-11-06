@@ -20,8 +20,9 @@ def test_retrieve_is_tenant_isolated(monkeypatch, tenant):
     monkeypatch.setenv("TENANT_TOKENS", f"tok-a:{tenant},tok-b:{tenant}-other")
     a, b = {"Authorization": "Bearer tok-a"}, {"Authorization": "Bearer tok-b"}
     lean = ScriptedLLM(SufficiencyVerdict=[SufficiencyVerdict(sufficient=True)])
-    with TestClient(create_app(Services(embedder=FakeEmbedder(), llm=ScriptedLLM(), triad=None,
-                                        retrieve_llm=lean))) as client:
+    with TestClient(
+        create_app(Services(embedder=FakeEmbedder(), llm=ScriptedLLM(), triad=None, retrieve_llm=lean))
+    ) as client:
         assert client.post("/ingest", files={"file": ("r.docx", make_docx())}, headers=a).status_code == 200
         secret = make_xlsx({"Private": [["Codename", "Value"], ["Falcon", 777]]})
         assert client.post("/ingest", files={"file": ("s.xlsx", secret)}, headers=b).status_code == 200
@@ -35,7 +36,8 @@ def test_retrieve_is_tenant_isolated(monkeypatch, tenant):
 
         # tenant c has ingested nothing: no sections, insufficient, and no LLM call (lean has no verdict left)
         monkeypatch.setenv("TENANT_TOKENS", f"tok-a:{tenant},tok-b:{tenant}-other,tok-c:{tenant}-empty")
-        empty = client.post("/v1/retrieve", json={"question": "Servers cost"},
-                            headers={"Authorization": "Bearer tok-c"})
+        empty = client.post(
+            "/v1/retrieve", json={"question": "Servers cost"}, headers={"Authorization": "Bearer tok-c"}
+        )
         assert empty.status_code == 200
         assert empty.json() == {"sections": [], "insufficient": True, "queries_run": ["Servers cost"], "attempts": 1}

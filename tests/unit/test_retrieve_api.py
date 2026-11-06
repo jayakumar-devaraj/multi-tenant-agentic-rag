@@ -21,8 +21,9 @@ BODY = {"question": "what is the budget"}
 
 
 def _section(pid: int, text: str = "Budget 4200") -> ParentSection:
-    return ParentSection(page_id=pid, doc_key="d", page_key=f"page:{pid}", source_name="f.pdf",
-                         markdown=text, score=1.0, chunk_ids=[pid])
+    return ParentSection(
+        page_id=pid, doc_key="d", page_key=f"page:{pid}", source_name="f.pdf", markdown=text, score=1.0, chunk_ids=[pid]
+    )
 
 
 class _Conn:
@@ -108,8 +109,11 @@ def test_no_connection_is_held_while_the_model_runs(client):
 
     make = client
     retrieve_llm = _HeldConnectionsLLM(lambda: make.held, SufficiencyVerdict=[SufficiencyVerdict(sufficient=True)])
-    chat_llm = _HeldConnectionsLLM(lambda: make.held, SufficiencyVerdict=[SufficiencyVerdict(sufficient=True)],
-                                   Answer=[Answer(answer="Budget 4200", insufficient=False, citations=["d"])])
+    chat_llm = _HeldConnectionsLLM(
+        lambda: make.held,
+        SufficiencyVerdict=[SufficiencyVerdict(sufficient=True)],
+        Answer=[Answer(answer="Budget 4200", insufficient=False, citations=["d"])],
+    )
     c, _ = make(llm=chat_llm, retrieve_llm=retrieve_llm)
     assert c.post("/v1/retrieve", json=BODY, headers=AUTH).status_code == 200
     assert c.post("/chat", json=BODY, headers=AUTH).status_code == 200
@@ -143,20 +147,27 @@ def test_tenant_comes_from_the_token_never_the_body(client):
 
 
 def test_sufficient_context_returns_sections_and_writes_no_answer(client):
-    llm = ScriptedLLM(SufficiencyVerdict=[SufficiencyVerdict(sufficient=True)])  # no Answer script: synthesis would fail
+    llm = ScriptedLLM(
+        SufficiencyVerdict=[SufficiencyVerdict(sufficient=True)]
+    )  # no Answer script: synthesis would fail
     c, _ = client(llm=llm)
     r = c.post("/v1/retrieve", json=BODY, headers=AUTH)
     assert r.status_code == 200
-    assert r.json() == {"sections": [_section(1).model_dump()], "insufficient": False,
-                        "queries_run": [BODY["question"]], "attempts": 1}
+    assert r.json() == {
+        "sections": [_section(1).model_dump()],
+        "insufficient": False,
+        "queries_run": [BODY["question"]],
+        "attempts": 1,
+    }
 
 
 def test_successful_retrieve_is_audited_without_question_text(client):
     llm = ScriptedLLM(SufficiencyVerdict=[SufficiencyVerdict(sufficient=True)])
     c, _ = client(llm=llm)
     assert c.post("/v1/retrieve", json=BODY, headers=AUTH).status_code == 200
-    assert client.audits == [("tenant-a", "retrieve", "ok",
-                              {"attempts": 1, "queries": 1, "sections": 1, "insufficient": False})]
+    assert client.audits == [
+        ("tenant-a", "retrieve", "ok", {"attempts": 1, "queries": 1, "sections": 1, "insufficient": False})
+    ]
     assert BODY["question"] not in str(client.audits)
 
 

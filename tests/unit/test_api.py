@@ -93,7 +93,6 @@ async def _fake_tenant_tx(*_):
     yield _NoDbConn()
 
 
-
 def test_request_id_is_echoed_and_stamped_on_logs(monkeypatch, caplog):
     monkeypatch.setattr("src.routers.api._tenant_tx", _fake_tenant_tx)
     c = _client(monkeypatch, embedder=_QuotaExhaustedEmbedder())
@@ -124,11 +123,15 @@ def test_rejections_are_recorded_with_their_status_reason_and_tenant(monkeypatch
     monkeypatch.setattr("src.routers.api.record_rejection", record)
     c = _client(monkeypatch)
     assert c.post("/v1/retrieve", json={"question": "q"}).status_code == 401
-    monkeypatch.setattr("src.routers.api.authenticate",
-                        lambda token: Session(tenant_id="tenant-a", subject="s", scopes=frozenset({SCOPE_QUERY})))
+    monkeypatch.setattr(
+        "src.routers.api.authenticate",
+        lambda token: Session(tenant_id="tenant-a", subject="s", scopes=frozenset({SCOPE_QUERY})),
+    )
     assert c.post("/ingest", files={"file": ("r.docx", b"x")}, headers=AUTH).status_code == 403
-    assert seen == [(401, "missing", "/v1/retrieve", False, None),
-                    (403, "missing scope rag:ingest", "/ingest", True, "tenant-a")]
+    assert seen == [
+        (401, "missing", "/v1/retrieve", False, None),
+        (403, "missing scope rag:ingest", "/ingest", True, "tenant-a"),
+    ]
 
 
 def test_a_rejection_that_cannot_be_recorded_is_still_the_same_refusal(monkeypatch):

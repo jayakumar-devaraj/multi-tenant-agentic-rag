@@ -114,8 +114,9 @@ router = APIRouter()
 v1 = APIRouter(prefix="/v1")
 
 
-async def record_rejection(request: Request, status: int, reason: str, token: str | None,
-                           tenant_id: str | None = None) -> None:
+async def record_rejection(
+    request: Request, status: int, reason: str, token: str | None, tenant_id: str | None = None
+) -> None:
     """Append one row to `auth_rejections` (migration 0005): which credential kind, a fingerprint of it
     (never the credential), the path and the reason. A failed write is logged and never changes the
     refusal the caller gets."""
@@ -126,14 +127,24 @@ async def record_rejection(request: Request, status: int, reason: str, token: st
             await conn.execute(
                 "INSERT INTO auth_rejections (status, reason, path, credential, fingerprint, tenant_id, client, "
                 "request_id) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)",
-                (status, reason[:200], request.url.path, credential, fingerprint, tenant_id,
-                 request.client.host if request.client else None, request_id.get()))
+                (
+                    status,
+                    reason[:200],
+                    request.url.path,
+                    credential,
+                    fingerprint,
+                    tenant_id,
+                    request.client.host if request.client else None,
+                    request_id.get(),
+                ),
+            )
     except (psycopg.Error, AttributeError) as exc:  # no pool (startup failed) is the AttributeError
         log.error("rejection_not_recorded", extra={"status": status, "error": type(exc).__name__})
 
 
-async def get_session(request: Request,
-                      creds: Annotated[HTTPAuthorizationCredentials | None, Depends(_bearer)]) -> Session:
+async def get_session(
+    request: Request, creds: Annotated[HTTPAuthorizationCredentials | None, Depends(_bearer)]
+) -> Session:
     """Authenticate the bearer token; the Session's tenant is the only tenant any query sees."""
     token = creds.credentials if creds else None
     try:
@@ -148,11 +159,19 @@ async def get_session(request: Request,
 def require_scope(scope: str) -> Any:
     """A dependency that authenticates, then requires `scope` (403 when the token lacks it)."""
 
-    async def dependency(request: Request, session: Annotated[Session, Depends(get_session)],
-                         creds: Annotated[HTTPAuthorizationCredentials | None, Depends(_bearer)]) -> Session:
+    async def dependency(
+        request: Request,
+        session: Annotated[Session, Depends(get_session)],
+        creds: Annotated[HTTPAuthorizationCredentials | None, Depends(_bearer)],
+    ) -> Session:
         if scope not in session.scopes:
-            await record_rejection(request, 403, f"missing scope {scope}", creds.credentials if creds else None,
-                                   tenant_id=session.tenant_id)
+            await record_rejection(
+                request,
+                403,
+                f"missing scope {scope}",
+                creds.credentials if creds else None,
+                tenant_id=session.tenant_id,
+            )
             raise HTTPException(403, f"token lacks the {scope} scope")
         return session
 
@@ -219,8 +238,12 @@ async def _audit_failure(request: Request, session: Session, action: Action, exc
 
 
 @router.post("/ingest", response_model=IngestResult)
-async def ingest(request: Request, file: UploadFile, session: Annotated[Session, Depends(ingest_session)],
-                 services: Annotated[Services, Depends(_services)]) -> IngestResult:
+async def ingest(
+    request: Request,
+    file: UploadFile,
+    session: Annotated[Session, Depends(ingest_session)],
+    services: Annotated[Services, Depends(_services)],
+) -> IngestResult:
     """Ingest one document into the caller's tenant."""
     if services.embedder is None:
         raise HTTPException(503, "no embedding provider configured")
@@ -243,9 +266,14 @@ async def ingest(request: Request, file: UploadFile, session: Annotated[Session,
             after = await documents_held(conn, session.tenant_id)
             if after > held and after > max_documents:
                 raise QuotaExceeded(f"document quota reached ({max_documents})")
-            await record_audit(conn, session, "ingest", "ok", doc_key=result.doc_key,
-                               detail={"filename": filename, "units": len(result.units),
-                                       "purged_pages": result.purged_pages})
+            await record_audit(
+                conn,
+                session,
+                "ingest",
+                "ok",
+                doc_key=result.doc_key,
+                detail={"filename": filename, "units": len(result.units), "purged_pages": result.purged_pages},
+            )
         return result
     except QuotaExceeded as exc:
         await _audit_denied(request, session, "ingest", "document_quota")
@@ -271,21 +299,35 @@ def _retriever(request: Request, services: Services, session: Session) -> Any:
 
 
 @router.post("/chat", response_model=ChatResponse)
-async def chat(request: Request, body: ChatRequest, session: Annotated[Session, Depends(query_session)],
-               services: Annotated[Services, Depends(_services)]) -> ChatResponse:
+async def chat(
+    request: Request,
+    body: ChatRequest,
+    session: Annotated[Session, Depends(query_session)],
+    services: Annotated[Services, Depends(_services)],
+) -> ChatResponse:
     """Answer a question from the caller's tenant only, via the self-correcting graph."""
     if services.llm is None or services.embedder is None:
         raise HTTPException(503, "no LLM/embedding provider configured")
     await _rate_limit(request, session, "query", "chat")
     try:
         graph = build_graph(_retriever(request, services, session), services.llm)
-        state = await graph.ainvoke({"question": body.question, "pending_queries": [body.question]},
-                                    config={"callbacks": trace_callbacks()})
+        state = await graph.ainvoke(
+            {"question": body.question, "pending_queries": [body.question]}, config={"callbacks": trace_callbacks()}
+        )
         # No audit row, no answer: a failed insert here fails the request instead of releasing unrecorded data.
         async with _tenant_tx(request, session.tenant_id) as conn:
-            await record_audit(conn, session, "chat", "ok", detail={
-                "attempts": state["attempts"], "queries": len(state["queries_run"]),
-                "sections": len(state["sections"]), "insufficient": state["answer"].insufficient})
+            await record_audit(
+                conn,
+                session,
+                "chat",
+                "ok",
+                detail={
+                    "attempts": state["attempts"],
+                    "queries": len(state["queries_run"]),
+                    "sections": len(state["sections"]),
+                    "insufficient": state["answer"].insufficient,
+                },
+            )
     except psycopg.OperationalError as exc:
         raise HTTPException(503, "database unavailable") from exc
     except TimeoutError as exc:
@@ -302,24 +344,53 @@ async def chat(request: Request, body: ChatRequest, session: Annotated[Session, 
             triad = await services.triad(body.question, answer.answer, contexts)
         except (TimeoutError, *PROVIDER_ERRORS) as exc:  # evaluation must not withhold a validated answer
             log.warning("triad_unavailable", extra={"error": type(exc).__name__})
-    log.info("chat_answered", extra={"tenant_id": session.tenant_id, "attempts": state["attempts"],
-                                     "insufficient": answer.insufficient, "triad": triad.model_dump()})
-    return ChatResponse(answer=answer.answer, insufficient=answer.insufficient, citations=answer.citations,
-                        queries_run=state["queries_run"], attempts=state["attempts"], triad=triad)
+    log.info(
+        "chat_answered",
+        extra={
+            "tenant_id": session.tenant_id,
+            "attempts": state["attempts"],
+            "insufficient": answer.insufficient,
+            "triad": triad.model_dump(),
+        },
+    )
+    return ChatResponse(
+        answer=answer.answer,
+        insufficient=answer.insufficient,
+        citations=answer.citations,
+        queries_run=state["queries_run"],
+        attempts=state["attempts"],
+        triad=triad,
+    )
 
 
-@v1.post("/retrieve", response_model=RetrieveResponse, operation_id="retrieve", responses={
-    401: {"model": ErrorBody, "description": "Missing or unknown bearer token."},
-    429: {"model": ErrorBody, "description": "The tenant's per-minute query limit is used up; retry after `Retry-After` seconds."},
-    503: {"model": ErrorBody, "description": "Model provider or database unavailable, or no provider configured."},
-    504: {"model": ErrorBody, "description": "Model call timed out, or the caller's deadline elapsed."},
-    500: {"description": "Unexpected server error (plain-text body)."},
-})
+@v1.post(
+    "/retrieve",
+    response_model=RetrieveResponse,
+    operation_id="retrieve",
+    responses={
+        401: {"model": ErrorBody, "description": "Missing or unknown bearer token."},
+        429: {
+            "model": ErrorBody,
+            "description": "The tenant's per-minute query limit is used up; retry after `Retry-After` seconds.",
+        },
+        503: {"model": ErrorBody, "description": "Model provider or database unavailable, or no provider configured."},
+        504: {"model": ErrorBody, "description": "Model call timed out, or the caller's deadline elapsed."},
+        500: {"description": "Unexpected server error (plain-text body)."},
+    },
+)
 async def retrieve_context(
-    request: Request, body: RetrieveRequest, session: Annotated[Session, Depends(query_session)],
+    request: Request,
+    body: RetrieveRequest,
+    session: Annotated[Session, Depends(query_session)],
     services: Annotated[Services, Depends(_services)],
-    x_timeout_ms: Annotated[int | None, Header(ge=1, le=RETRIEVE_MAX_TIMEOUT_MS, description=(
-        "Caller's deadline in milliseconds for the whole call. Absent: the server default applies."))] = None,
+    x_timeout_ms: Annotated[
+        int | None,
+        Header(
+            ge=1,
+            le=RETRIEVE_MAX_TIMEOUT_MS,
+            description=("Caller's deadline in milliseconds for the whole call. Absent: the server default applies."),
+        ),
+    ] = None,
 ) -> RetrieveResponse:
     """Run the self-correcting retrieval loop for the caller's tenant and return passages; no answer is written."""
     llm = services.retrieve_llm or services.llm
@@ -330,13 +401,23 @@ async def retrieve_context(
     try:
         graph = build_graph(_retriever(request, services, session), llm, retrieve_only=True)
         async with asyncio.timeout(timeout_s):
-            state = await graph.ainvoke({"question": body.question, "pending_queries": [body.question]},
-                                        config={"callbacks": trace_callbacks()})
+            state = await graph.ainvoke(
+                {"question": body.question, "pending_queries": [body.question]}, config={"callbacks": trace_callbacks()}
+            )
         insufficient = not state["verdict"].sufficient
         async with _tenant_tx(request, session.tenant_id) as conn:
-            await record_audit(conn, session, "retrieve", "ok", detail={
-                "attempts": state["attempts"], "queries": len(state["queries_run"]),
-                "sections": 0 if insufficient else len(state["sections"]), "insufficient": insufficient})
+            await record_audit(
+                conn,
+                session,
+                "retrieve",
+                "ok",
+                detail={
+                    "attempts": state["attempts"],
+                    "queries": len(state["queries_run"]),
+                    "sections": 0 if insufficient else len(state["sections"]),
+                    "insufficient": insufficient,
+                },
+            )
     except psycopg.OperationalError as exc:
         raise HTTPException(503, "database unavailable") from exc
     except (TimeoutError, *PROVIDER_TIMEOUTS) as exc:
@@ -345,17 +426,31 @@ async def retrieve_context(
     except PROVIDER_ERRORS as exc:
         await _audit_failure(request, session, "retrieve", exc)
         raise _provider_down(exc) from exc
-    log.info("retrieve_answered", extra={"tenant_id": session.tenant_id, "attempts": state["attempts"],
-                                         "insufficient": insufficient, "sections": len(state["sections"])})
-    return RetrieveResponse(sections=[] if insufficient else state["sections"], insufficient=insufficient,
-                            queries_run=state["queries_run"], attempts=state["attempts"])
+    log.info(
+        "retrieve_answered",
+        extra={
+            "tenant_id": session.tenant_id,
+            "attempts": state["attempts"],
+            "insufficient": insufficient,
+            "sections": len(state["sections"]),
+        },
+    )
+    return RetrieveResponse(
+        sections=[] if insufficient else state["sections"],
+        insufficient=insufficient,
+        queries_run=state["queries_run"],
+        attempts=state["attempts"],
+    )
 
 
 @router.get("/audit", response_model=AuditPage)
-async def audit_trail(request: Request, session: Annotated[Session, Depends(query_session)],
-                      limit: Annotated[int, Query(ge=1, le=200)] = 50,
-                      before_id: Annotated[int | None, Query(ge=1)] = None,
-                      action: Action | None = None) -> AuditPage:
+async def audit_trail(
+    request: Request,
+    session: Annotated[Session, Depends(query_session)],
+    limit: Annotated[int, Query(ge=1, le=200)] = 50,
+    before_id: Annotated[int | None, Query(ge=1)] = None,
+    action: Action | None = None,
+) -> AuditPage:
     """The caller's own tenant audit trail, newest first. The tenant comes only from the token."""
     try:
         async with _tenant_tx(request, session.tenant_id) as conn:
@@ -373,6 +468,7 @@ async def health(services: Annotated[Services, Depends(_services)]) -> dict[str,
 
 def create_app(services: Services) -> FastAPI:
     """Build the FastAPI app around injected services."""
+
     @asynccontextmanager
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         """Open the pool and verify the migrated schema; an unreachable or unmigrated database fails startup loudly."""

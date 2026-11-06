@@ -5,7 +5,8 @@ from src.routers.contract import CONTRACT_PATH, render, v1_openapi
 
 def test_committed_contract_matches_the_code():
     assert CONTRACT_PATH.read_text(encoding="utf-8") == render(), (
-        "regenerate with: uv run python -m src.routers.contract")
+        "regenerate with: uv run python -m src.routers.contract"
+    )
 
 
 def test_contract_covers_only_v1_and_documents_every_status():
