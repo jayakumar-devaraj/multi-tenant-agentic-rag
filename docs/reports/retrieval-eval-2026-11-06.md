@@ -41,3 +41,73 @@ time.
 
 **Groundedness.** It needs a real chat model, and no Groq key is available for this run. It is reported as
 not run, not as a pass or a miss, unless a key is provided later.
+
+## Results
+
+The pre-registration above is commit `f98c8ad`. Everything above this heading and the data files are
+unchanged since then.
+
+| Measure | Target | Result | Outcome |
+|---|---|---|---|
+| recall@5 | at least 0.80 | 0.900 | **Met, on this synthetic set only** |
+| groundedness | at least 0.80 | not measured | **Not run:** no Groq key was available |
+| `/v1/retrieve` p95, sequential | at most 2 s | 54, 60 and 56 ms over three runs | **Met, without the model call** |
+
+Command, run three times against `pgvector/pgvector:pg16` from `main` at `9a7cc46` plus this script. It does
+not include the open fixes in #48 to #51. The script was reformatted between runs 2 and 3, with no logic change.
+
+```bash
+DATABASE_URL=postgresql://rag@127.0.0.1:5434/rag PYTHONPATH=. uv run python tests/load/retrieval_eval.py
+```
+
+### Recall
+
+Recall was identical in all three runs. Without the model, each question ran one retrieval pass, with no
+re-query.
+
+| Category | Questions | recall@5 | recall@4 |
+|---|---|---|---|
+| exact_id | 5 | 1.000 | 1.000 |
+| paraphrase | 15 | 0.867 | 0.733 |
+| table | 6 | 1.000 | 1.000 |
+| cross_section | 4 | 0.750 | 0.750 |
+| **all** | **30** | **0.900** | **0.833** |
+
+recall@4 is the figure closer to what the service does, because `retrieve` defaults to `top_k=4`. It is
+reported without a target.
+
+Every question below 1.0:
+
+| Question | Labeled section | recall@5 | recall@4 | Top returned |
+|---|---|---|---|---|
+| q11 A customer gave me an expensive present, what do I do? | handbook page 6 | 0.00 | 0.00 | sales Q2, customer onboarding |
+| q15 How worn can the rubber get before a lorry needs new wheels fitted? | fleet page 2 | 0.00 | 0.00 | fleet page 3, fleet page 5 |
+| q28 How long is CCTV footage kept, and who supplies CCTV monitoring? | security page 4, contracts tab | 0.50 | 0.50 | security page 4, warehouse |
+| q30 How many litres can go on a fuel card per fill, and how much notice does the fuel card contract need? | fleet page 4, renewals tab | 0.50 | 0.50 | fleet page 4, fleet page 5 |
+| q13 How long do we hang on to client data once a deal finishes? | security page 4 | 1.00 | 0.00 | security page 3, customer onboarding (labeled section fifth) |
+| q20 How often must lift-truck operators requalify? | warehouse | 1.00 | 0.00 | fleet page 1, handbook page 1 (labeled section fifth) |
+
+What these show, and what they do not:
+- Identifier and table lookups were all found. The misses are in paraphrases and two-part questions.
+- q13 and q20 are found only at rank 5, so the service's default of 4 would miss them on the first pass.
+- q28 missed the contracts tab even though it contains the word "CCTV", and q30 missed the renewals tab. The
+  cause was not investigated; nothing was changed in response.
+
+### Latency
+
+300 requests per case, through the app in process, with real embeddings and Postgres and a test double for
+the model call.
+
+| Case | Run 1 p50 / p95 / max ms | Run 2 p50 / p95 / max ms | Run 3 p50 / p95 / max ms |
+|---|---|---|---|
+| sequential | 36 / 54 / 95 | 35 / 60 / 79 | 35 / 56 / 92 |
+| 10 at a time (no target) | 135 / 217 / 330 | 128 / 231 / 341 | 135 / 204 / 270 |
+
+A caller's latency also includes the sufficiency model call, the network and any re-query passes, none of
+which are measured here. Target 2 s was set for this narrower measure, and it was met by a wide margin on a
+26-section corpus, which is too small to predict behavior at scale.
+
+### Deviations
+
+None to the data, labels, targets or retrieval parameters. Groundedness was registered in advance as not
+run without a key.
