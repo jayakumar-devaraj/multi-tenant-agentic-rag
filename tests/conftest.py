@@ -3,11 +3,10 @@
 import hashlib
 import io
 
-import pytest
-
 import docx
 import openpyxl
 import pymupdf
+import pytest
 
 from src.db.connection import EMBEDDING_DIM
 

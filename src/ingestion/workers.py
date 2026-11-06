@@ -82,7 +82,7 @@ class XlsxWorker(Worker):
             if not numbered:
                 continue
             width = max(len(r) for _, r in numbered)
-            header_idx, header = numbered[0]
+            _, header = numbered[0]
             head = ["row"] + [f"{get_column_letter(c + 1)}:{_md_cell(h)}" for c, h in enumerate(header)]
             rows = [head] + [[i, *r] for i, r in numbered[1:]]
             body = md_table([r + [None] * (width + 1 - len(r)) for r in rows])

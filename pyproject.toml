@@ -38,9 +38,13 @@ markers = [
 dev = [
     "pytest==9.1.1",
     "pytest-cov==7.1.0",
+    "ruff==0.17.4",
     {include-group = "migrate"},
 ]
 migrate = [
     "alembic==1.20.1",
     "psycopg[binary]==3.3.6",
 ]
+
+[tool.ruff]
+line-length = 120

@@ -66,6 +66,6 @@ def trace_callbacks() -> list[Any]:
     """
     if not (os.environ.get("LANGFUSE_PUBLIC_KEY") and os.environ.get("LANGFUSE_SECRET_KEY")):
         return []
-    from langfuse.langchain import CallbackHandler  # noqa: PLC0415 - only imported when configured
+    from langfuse.langchain import CallbackHandler
 
     return [CallbackHandler()]  # VERIFY: Langfuse 4.15.6 handler against a live Langfuse (no keys here)

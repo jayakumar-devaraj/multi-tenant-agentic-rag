@@ -22,8 +22,6 @@ from src.ingestion.pipeline import Embedder, IngestResult, ingest_file
 from src.ingestion.workers import UnsupportedFormatError, worker_for
 from src.orchestration.graph import build_graph
 from src.retrieval.hybrid import ParentSection, retrieve
-from src.utils.limits import Limits, QuotaExceeded, RateLimited, documents_held, take
-from src.utils.metrics import MetricsMiddleware
 from src.utils.auth import (
     SCOPE_INGEST,
     SCOPE_QUERY,
@@ -33,6 +31,8 @@ from src.utils.auth import (
     authenticate,
     require_a_login_method,
 )
+from src.utils.limits import Limits, QuotaExceeded, RateLimited, documents_held, take
+from src.utils.metrics import MetricsMiddleware
 from src.utils.observability import (
     install_request_id_logging,
     request_id,

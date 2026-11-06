@@ -68,11 +68,11 @@ def _chat_models(max_retries: int = 2) -> list[Any]:
     """Configured chat models in priority order: Groq first, OpenAI as fallback."""
     models = []
     if os.environ.get("GROQ_API_KEY") and os.environ.get("GROQ_CHAT_MODEL"):
-        from langchain_groq import ChatGroq  # noqa: PLC0415
+        from langchain_groq import ChatGroq
 
         models.append(ChatGroq(model=os.environ["GROQ_CHAT_MODEL"], timeout=CHAT_TIMEOUT_S, max_retries=max_retries))
     if os.environ.get("OPENAI_API_KEY") and os.environ.get("OPENAI_CHAT_MODEL"):
-        from langchain_openai import ChatOpenAI  # noqa: PLC0415
+        from langchain_openai import ChatOpenAI
 
         models.append(ChatOpenAI(model=os.environ["OPENAI_CHAT_MODEL"], timeout=CHAT_TIMEOUT_S, max_retries=max_retries))
     return models
@@ -80,10 +80,10 @@ def _chat_models(max_retries: int = 2) -> list[Any]:
 
 def _embeddings() -> Any | None:
     """Local fastembed when FASTEMBED_MODEL is set, else OpenAI embeddings; the dimension must match the schema."""
-    from src.db.connection import EMBEDDING_DIM  # noqa: PLC0415
+    from src.db.connection import EMBEDDING_DIM
 
     if os.environ.get("FASTEMBED_MODEL"):
-        from langchain_community.embeddings.fastembed import FastEmbedEmbeddings  # noqa: PLC0415
+        from langchain_community.embeddings.fastembed import FastEmbedEmbeddings
 
         # One ONNX Runtime thread: by default it starts one per host core, which spin and take CPU from the
         # event loop; one thread was faster for queries and 16-chunk batches, capped or not (ADR 0005).
@@ -93,7 +93,7 @@ def _embeddings() -> Any | None:
             raise RuntimeError(f"FASTEMBED_MODEL yields {dim}-dim vectors; schema requires {EMBEDDING_DIM}")
         return embeddings
     if os.environ.get("OPENAI_API_KEY") and os.environ.get("OPENAI_EMBEDDING_MODEL"):
-        from langchain_openai import OpenAIEmbeddings  # noqa: PLC0415
+        from langchain_openai import OpenAIEmbeddings
 
         return OpenAIEmbeddings(model=os.environ["OPENAI_EMBEDDING_MODEL"], dimensions=EMBEDDING_DIM)
     return None
@@ -104,7 +104,7 @@ def build_services() -> Services:
 
     Model names are required settings, never defaults, so no model id is assumed here.
     """
-    from src.eval.triad import RagasTriadScorer  # noqa: PLC0415
+    from src.eval.triad import RagasTriadScorer
 
     chats, embeddings = _chat_models(), _embeddings()
     if not chats or embeddings is None:

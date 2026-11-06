@@ -53,6 +53,7 @@ def pr_is_merged(number: str) -> bool:
             cwd=ROOT,
             capture_output=True,
             text=True,
+            check=False,
         )
         return done.returncode == 0 and done.stdout.strip() == "MERGED"
     return number in set(re.findall(r"#(\d+)\b", git("log", "--merges", "--format=%s")))
@@ -64,7 +65,7 @@ def unknown_references() -> list[str]:
     problems = []
     for h in sorted(set(HASH.findall(text))):
         found = subprocess.run(
-            ["git", "cat-file", "-e", f"{h}^{{commit}}"], cwd=ROOT, capture_output=True
+            ["git", "cat-file", "-e", f"{h}^{{commit}}"], cwd=ROOT, capture_output=True, check=False
         )
         if found.returncode != 0:
             problems.append(f"{ORCHESTRATION}: unknown commit `{h}`")

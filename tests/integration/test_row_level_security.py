@@ -81,10 +81,14 @@ def test_a_statement_without_a_tenant_predicate_sees_only_the_bound_tenant(db, t
 def test_writing_another_tenants_rows_is_denied(db):
     _, app_url = db
     for sql in (
-        f"INSERT INTO page_registry (tenant_id, doc_key, page_key, sha256, source_name, markdown) "
-        f"VALUES ('bravo', 'x', 'x', '{SHA}', 's', 'm')",
-        f"INSERT INTO chunks (tenant_id, page_id, ord, content, embedding) "
-        f"SELECT 'bravo', id, 1, 'c', {VECTOR} FROM page_registry",
+        (
+            f"INSERT INTO page_registry (tenant_id, doc_key, page_key, sha256, source_name, markdown) "
+            f"VALUES ('bravo', 'x', 'x', '{SHA}', 's', 'm')"
+        ),
+        (
+            f"INSERT INTO chunks (tenant_id, page_id, ord, content, embedding) "
+            f"SELECT 'bravo', id, 1, 'c', {VECTOR} FROM page_registry"
+        ),
         "INSERT INTO audit_log (tenant_id, subject, action, outcome) VALUES ('bravo', 's', 'chat', 'ok')",
         "UPDATE page_registry SET tenant_id = 'bravo'",
         "UPDATE chunks SET tenant_id = 'bravo'",

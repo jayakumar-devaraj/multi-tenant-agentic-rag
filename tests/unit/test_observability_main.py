@@ -76,7 +76,7 @@ def test_fallback_answers_when_primary_fails():
 
 def test_fastembed_runs_on_one_onnx_thread(monkeypatch):
     """ONNX Runtime's default of one thread per host core wastes CPU (ADR 0005); the embedder gets threads=1."""
-    import langchain_community.embeddings.fastembed as fastembed
+    from langchain_community.embeddings import fastembed
 
     from src.db.connection import EMBEDDING_DIM
     from src.main import _embeddings

@@ -24,7 +24,7 @@ def collected(marker: str | None) -> int:
     """Number of tests selected by `-m marker` (the default selection when None)."""
     cmd = [sys.executable, "-m", "pytest", "--collect-only", "-q", "-p", "no:cacheprovider"]
     out = subprocess.run(
-        cmd + (["-m", marker] if marker else []), cwd=ROOT, capture_output=True, text=True
+        cmd + (["-m", marker] if marker else []), cwd=ROOT, capture_output=True, text=True, check=False
     ).stdout
     match = re.search(r"(\d+)(?:/\d+)? tests? collected", out)
     if not match:

@@ -153,7 +153,7 @@ def _client(monkeypatch, keys) -> TestClient:
 
 
 def test_api_maps_auth_failures_to_401_403_and_503(monkeypatch):
-    bearer = lambda t: {"Authorization": f"Bearer {t}"}  # noqa: E731
+    bearer = lambda t: {"Authorization": f"Bearer {t}"}
     c = _client(monkeypatch, FakeKeys())
     assert c.post("/v1/retrieve", json={"question": "q"}, headers=bearer("junk.jwt.shape")).status_code == 401
     # a query-only token may not ingest; an ingest-only token may not query
@@ -168,7 +168,7 @@ def test_api_maps_auth_failures_to_401_403_and_503(monkeypatch):
 class _Jwks(BaseHTTPRequestHandler):
     body = b""
 
-    def do_GET(self):  # noqa: N802
+    def do_GET(self):
         self.send_response(200)
         self.send_header("Content-Type", "application/json")
         self.end_headers()
