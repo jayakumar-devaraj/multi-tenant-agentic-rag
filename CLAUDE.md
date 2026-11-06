@@ -210,7 +210,7 @@ destroys it:
 - **If the audit row cannot be written, the request fails and returns nothing.** Making it best-effort for reads releases data that is not on record.
 - **Startup fails when the database is not at `EXPECTED_SCHEMA_REVISION`; infrastructure faults are 5xx.** Never add a fallback that degrades silently.
 
-**Run and test.** `cp .env.example .env` (set the placeholders), `docker compose -p multi-tenant-agentic-rag --env-file .env up -d db migrate`, `uv sync --locked`, then `uv run --env-file .env pytest -q --cov=src --cov-report=term-missing` (this repository has no linter configured), `uv run python scripts/check_docs.py` for links and log references. Tests marked `integration` need the compose Postgres; tests marked `live` call real model providers and are excluded by default (`-m live`).
+**Run and test.** `cp .env.example .env` (set the placeholders), `docker compose -p multi-tenant-agentic-rag --env-file .env up -d db migrate`, `uv sync --locked`, then `uv run --env-file .env pytest -q --cov=src --cov-report=term-missing`, `uv run ruff check .`, `uv run ruff format --check .`, `uv run python scripts/check_docs.py` for links and log references. Tests marked `integration` need the compose Postgres; tests marked `live` call real model providers and are excluded by default (`-m live`).
 
 **Verification rung 2 here means** (§2): the real Postgres with pgvector from `docker-compose.yml`, for
 the repository, ingestion, hybrid retrieval, migrations, row-level security and audit code. Model
@@ -222,7 +222,7 @@ disagree, the code is right and the document is the bug.
 
 **Toolchain standard.** Python 3.13.13 (`.python-version`), managed by uv: `uv sync --locked`,
 `uv add <pkg>==<version>` (exact pins), `uv lock`. Keep the lockfile committed; never hand-edit it.
-The `dev` group (pytest, pytest-cov, and the `migrate` group it includes) must never enter the API
+The `dev` group (pytest, pytest-cov, ruff, and the `migrate` group it includes) must never enter the API
 image: the Dockerfile runs `uv sync --locked --no-dev`, and the `migrate` image target installs only
 the `migrate` group.
 
