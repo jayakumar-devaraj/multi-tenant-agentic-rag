@@ -1,6 +1,6 @@
 # Design Dialogue — Step A (Stack Bundles & Architecture)
 
-Live transcript of Phase 1 / Step A, per `docs/prompts/on_site_coding_challenge.md`. Append-only
+Live transcript of Phase 1 / Step A, per `docs/prompts/agent-build-prompt.md`. Append-only
 after Gate A locks.
 
 ## Architecture (shared across all three bundles)
