@@ -20,6 +20,7 @@ Read from `pyproject.toml` / `uv.lock` and the running container.
 - **Rejected requests:** every 401 and 403 is recorded in `auth_rejections` (status, reason, path, credential kind and fingerprint, never the credential); the API can only insert, operators query it with SQL (ADR 0002 addendum).
 - **Vector adapter:** pgvector (Python) 0.5.0; `Vector.to_text()` serializes embeddings for `::vector` inserts.
 - **Validation:** pydantic 2.13.5, which validates `PageIn` / `ChunkIn` at the repository boundary (SHA-256 format, embedding dimension, non-empty tenant).
+- **Lint and format:** ruff 0.17.4.
 - **Testing:** pytest 9.1.1. Tests marked `integration` run against the real Postgres from `docker-compose.yml`.
 - **Document parsing:** pymupdf 1.28.2 handles PDF pages; `find_tables()` turns table grids into Markdown and the remaining text blocks are kept in reading order. openpyxl 3.1.5 handles XLSX: one unit per tab, cells labelled with Excel row numbers and column letters, and formulas kept when no cached value exists. python-docx 1.2.0 handles DOCX headings, paragraphs and inline tables in document order.
 - **Retrieval / security:** a single SQL statement runs a dense pgvector cosine leg and a sparse Postgres FTS leg (`simple` config, which keeps identifiers intact), both filtered by the session's `tenant_id`. Results are fused in Python with Reciprocal Rank Fusion (k=60), then parent pages/tabs are reassembled through `chunks.page_id`. Bearer tokens map to tenants server-side (`TENANT_TOKENS`, compared with `hmac.compare_digest`); no new dependency.
@@ -29,7 +30,7 @@ Read from `pyproject.toml` / `uv.lock` and the running container.
 - **Evaluation:** ragas 0.4.3 computes ContextRelevance, Faithfulness (groundedness) and ResponseRelevancy per answer when a provider is configured; the deterministic numeric groundedness score is always computed. The triad is logged as `chat_answered` and returned in the response.
 - **Observability:** JSON-line logging (`src/utils/observability.py`); each line carries the `request_id` (echoed as the `X-Request-ID` header). langfuse 4.15.6 LangChain callback when `LANGFUSE_PUBLIC_KEY` and `LANGFUSE_SECRET_KEY` are set. prometheus-client 0.26.0 serves `rag_api_requests_total{method,route,status}` and `rag_api_request_seconds{method,route}` on `METRICS_PORT` (default 9100); there is no tenant label.
 - **API:** fastapi 0.141.1, served by uvicorn 0.53.0 on a SelectorEventLoop (`uv run python -m src.main`). python-multipart 0.0.32 handles uploads. 401 for a bad token, 413/415/422 for bad input, 503/504 for infrastructure failures. `POST /v1/retrieve` is the versioned retrieval-only endpoint; `RETRIEVE_LLM_MAX_RETRIES` (default 0) sets its provider-client retries, while `/chat` keeps 2.
-- **CI:** GitHub Actions (`.github/workflows/ci.yml`) runs `uv sync --locked` and `uv run pytest` on every push and PR, against a `pgvector/pgvector:pg16` service container. It uses actions/checkout v7.0.1, astral-sh/setup-uv v10.2.0 and uv 0.11.19.
+- **CI:** GitHub Actions (`.github/workflows/ci.yml`) runs `uv sync --locked`, `ruff check`, `ruff format --check` and `uv run pytest` on every push and PR, against a `pgvector/pgvector:pg16` service container. It uses actions/checkout v7.0.1, astral-sh/setup-uv v10.2.0 and uv 0.11.19.
 - **Coverage:** pytest-cov 7.1.0. CI prints a term-missing report; the committed snapshot is `docs/coverage/coverage_report.txt`.
 
 ## Architecture
@@ -82,12 +83,14 @@ Code lives under `src/<responsibility>/`, per the layout in `docs/master_plan.md
 
 ```bash
 uv run --env-file .env pytest -q --cov=src --cov-report=term-missing
+uv run ruff check .
+uv run ruff format --check .
 ```
 
 Tests marked `integration` use the real Postgres from `docker-compose.yml`. Tests marked `live` call the real OpenAI models and are excluded by default; run them with `uv run --env-file .env pytest -m live -s` once `OPENAI_*` is set in `.env`. LLM and embedding calls in tests use labeled test doubles (`tests/conftest.py`). The last committed coverage report is `docs/coverage/coverage_report.txt`.
 
 ## Deployment/CI
 
-`.github/workflows/ci.yml` runs `uv sync --locked` and the full suite, with coverage, against a `pgvector/pgvector:pg16` service on every push and PR. No deployment target is configured.
+`.github/workflows/ci.yml` runs `uv sync --locked`, `ruff check`, `ruff format --check` and the full suite, with coverage, against a `pgvector/pgvector:pg16` service on every push and PR. No deployment target is configured.
 
 `.github/workflows/publish.yml` runs on a pushed `v*` tag: it calls the CI workflow, then builds the `Dockerfile` and publishes `ghcr.io/jayakumar-devaraj/multi-tenant-agentic-rag:<tag>` and, from its `migrate` target, `ghcr.io/jayakumar-devaraj/multi-tenant-agentic-rag-migrate:<tag>` (run it with `MIGRATION_DATABASE_URL` and `APP_DB_ROLE` before the API) using actions docker/setup-buildx-action v4.4.1, docker/login-action v4.6.0, docker/metadata-action v6.2.0 and docker/build-push-action v7.4.0. The image embeds the `FASTEMBED_MODEL` build argument (default `BAAI/bge-small-en-v1.5`); run it with the same `FASTEMBED_MODEL`, since the cache is read-only for the non-root user.

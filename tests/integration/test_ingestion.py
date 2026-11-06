@@ -9,8 +9,10 @@ from tests.conftest import FakeEmbedder, make_pdf, make_xlsx
 
 pytestmark = pytest.mark.integration
 
-PAGES = [("Ledger page one", [["ID", "Amount"], ["INV-001", "250"]]),
-         ("Ledger page two", [["ID", "Amount"], ["INV-002", "900"]])]
+PAGES = [
+    ("Ledger page one", [["ID", "Amount"], ["INV-001", "250"]]),
+    ("Ledger page two", [["ID", "Amount"], ["INV-002", "900"]]),
+]
 
 
 async def _chunks(conn, tenant):

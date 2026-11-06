@@ -33,8 +33,7 @@ SUFFICIENCY_SYSTEM = (
 
 SYNTHESIS_SYSTEM = (
     "Answer the question using only the documents. Copy numbers exactly as they appear. Cite each "
-    "document you use by its id. If the documents do not support an answer, set insufficient=true. "
-    + _GUARD
+    "document you use by its id. If the documents do not support an answer, set insufficient=true. " + _GUARD
 )
 
 

@@ -68,22 +68,24 @@ def _chat_models(max_retries: int = 2) -> list[Any]:
     """Configured chat models in priority order: Groq first, OpenAI as fallback."""
     models = []
     if os.environ.get("GROQ_API_KEY") and os.environ.get("GROQ_CHAT_MODEL"):
-        from langchain_groq import ChatGroq  # noqa: PLC0415
+        from langchain_groq import ChatGroq
 
         models.append(ChatGroq(model=os.environ["GROQ_CHAT_MODEL"], timeout=CHAT_TIMEOUT_S, max_retries=max_retries))
     if os.environ.get("OPENAI_API_KEY") and os.environ.get("OPENAI_CHAT_MODEL"):
-        from langchain_openai import ChatOpenAI  # noqa: PLC0415
+        from langchain_openai import ChatOpenAI
 
-        models.append(ChatOpenAI(model=os.environ["OPENAI_CHAT_MODEL"], timeout=CHAT_TIMEOUT_S, max_retries=max_retries))
+        models.append(
+            ChatOpenAI(model=os.environ["OPENAI_CHAT_MODEL"], timeout=CHAT_TIMEOUT_S, max_retries=max_retries)
+        )
     return models
 
 
 def _embeddings() -> Any | None:
     """Local fastembed when FASTEMBED_MODEL is set, else OpenAI embeddings; the dimension must match the schema."""
-    from src.db.connection import EMBEDDING_DIM  # noqa: PLC0415
+    from src.db.connection import EMBEDDING_DIM
 
     if os.environ.get("FASTEMBED_MODEL"):
-        from langchain_community.embeddings.fastembed import FastEmbedEmbeddings  # noqa: PLC0415
+        from langchain_community.embeddings.fastembed import FastEmbedEmbeddings
 
         # One ONNX Runtime thread: by default it starts one per host core, which spin and take CPU from the
         # event loop; one thread was faster for queries and 16-chunk batches, capped or not (ADR 0005).
@@ -93,7 +95,7 @@ def _embeddings() -> Any | None:
             raise RuntimeError(f"FASTEMBED_MODEL yields {dim}-dim vectors; schema requires {EMBEDDING_DIM}")
         return embeddings
     if os.environ.get("OPENAI_API_KEY") and os.environ.get("OPENAI_EMBEDDING_MODEL"):
-        from langchain_openai import OpenAIEmbeddings  # noqa: PLC0415
+        from langchain_openai import OpenAIEmbeddings
 
         return OpenAIEmbeddings(model=os.environ["OPENAI_EMBEDDING_MODEL"], dimensions=EMBEDDING_DIM)
     return None
@@ -104,12 +106,18 @@ def build_services() -> Services:
 
     Model names are required settings, never defaults, so no model id is assumed here.
     """
-    from src.eval.triad import RagasTriadScorer  # noqa: PLC0415
+    from src.eval.triad import RagasTriadScorer
 
     chats, embeddings = _chat_models(), _embeddings()
     if not chats or embeddings is None:
-        log.warning("providers_unconfigured", extra={"chat": bool(chats), "embeddings": embeddings is not None,
-                                                     "needs": "GROQ_* or OPENAI_* chat; FASTEMBED_MODEL or OPENAI_* embeddings"})
+        log.warning(
+            "providers_unconfigured",
+            extra={
+                "chat": bool(chats),
+                "embeddings": embeddings is not None,
+                "needs": "GROQ_* or OPENAI_* chat; FASTEMBED_MODEL or OPENAI_* embeddings",
+            },
+        )
     llm = FallbackLLM(chats[0], chats[1] if len(chats) > 1 else None) if chats else None
     # /v1/retrieve callers own the retry policy, so its models retry inside the provider client far less than /chat's
     lean = _chat_models(int(os.environ.get("RETRIEVE_LLM_MAX_RETRIES", "0")))
@@ -119,8 +127,12 @@ def build_services() -> Services:
         name = getattr(embeddings, "model_name", None) or getattr(embeddings, "model", "")
         named = _NamedEmbeddings(embeddings, str(name))
     triad = RagasTriadScorer(chats[0], named) if chats and named is not None else None
-    return Services(embedder=_LangchainEmbedder(embeddings) if embeddings is not None else None, llm=llm, triad=triad,
-                    retrieve_llm=retrieve_llm)
+    return Services(
+        embedder=_LangchainEmbedder(embeddings) if embeddings is not None else None,
+        llm=llm,
+        triad=triad,
+        retrieve_llm=retrieve_llm,
+    )
 
 
 def main() -> None:

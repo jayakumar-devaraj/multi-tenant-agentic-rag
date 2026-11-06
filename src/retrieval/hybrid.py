@@ -67,8 +67,9 @@ async def retrieve(
 ) -> list[ParentSection]:
     """Run both legs for the session's tenant, fuse with RRF, and return the top parent sections."""
     [vec] = await embedder.embed([query])
-    cur = await conn.execute(_HYBRID_SQL, {"text": query, "vec": Vector(vec).to_text(),
-                                           "tenant": session.tenant_id, "lim": LEG_LIMIT})
+    cur = await conn.execute(
+        _HYBRID_SQL, {"text": query, "vec": Vector(vec).to_text(), "tenant": session.tenant_id, "lim": LEG_LIMIT}
+    )
     legs: dict[str, list[tuple[int, int]]] = defaultdict(list)
     for chunk_id, leg, rank in await cur.fetchall():
         legs[leg].append((rank, chunk_id))
@@ -83,11 +84,28 @@ async def retrieve(
     )
     sections: dict[int, ParentSection] = {}
     for chunk_id, page_id, doc_key, page_key, source, markdown in await cur.fetchall():
-        s = sections.setdefault(page_id, ParentSection(page_id=page_id, doc_key=doc_key, page_key=page_key,
-                                                       source_name=source, markdown=markdown, score=0.0, chunk_ids=[]))
+        s = sections.setdefault(
+            page_id,
+            ParentSection(
+                page_id=page_id,
+                doc_key=doc_key,
+                page_key=page_key,
+                source_name=source,
+                markdown=markdown,
+                score=0.0,
+                chunk_ids=[],
+            ),
+        )
         s.score = max(s.score, fused[chunk_id])
         s.chunk_ids.append(chunk_id)
     ranked = sorted(sections.values(), key=lambda s: s.score, reverse=True)[:top_k]
-    log.info("retrieved", extra={"tenant_id": session.tenant_id, "dense": len(legs["dense"]),
-                                 "sparse": len(legs["sparse"]), "sections": len(ranked)})
+    log.info(
+        "retrieved",
+        extra={
+            "tenant_id": session.tenant_id,
+            "dense": len(legs["dense"]),
+            "sparse": len(legs["sparse"]),
+            "sections": len(ranked),
+        },
+    )
     return ranked

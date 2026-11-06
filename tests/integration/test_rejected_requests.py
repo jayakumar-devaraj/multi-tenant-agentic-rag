@@ -24,7 +24,9 @@ def _rows(request_ids: list[str]) -> list[tuple]:
         try:
             cur = await conn.execute(
                 "SELECT status, reason, path, credential, fingerprint, tenant_id, request_id FROM auth_rejections "
-                "WHERE request_id = ANY(%s) ORDER BY id", (request_ids,))
+                "WHERE request_id = ANY(%s) ORDER BY id",
+                (request_ids,),
+            )
             return await cur.fetchall()
         finally:
             await conn.close()
@@ -38,8 +40,11 @@ def test_missing_and_unknown_tokens_are_recorded_without_the_token(monkeypatch, 
     ids = [f"rej-{uuid.uuid4().hex}" for _ in range(2)]
     with TestClient(create_app(Services(embedder=FakeEmbedder(), llm=ScriptedLLM(), triad=None))) as client:
         missing = client.post("/v1/retrieve", json={"question": "q"}, headers={"X-Request-ID": ids[0]})
-        wrong = client.post("/v1/retrieve", json={"question": "q"},
-                            headers={"X-Request-ID": ids[1], "Authorization": f"Bearer {secret}"})
+        wrong = client.post(
+            "/v1/retrieve",
+            json={"question": "q"},
+            headers={"X-Request-ID": ids[1], "Authorization": f"Bearer {secret}"},
+        )
     assert (missing.status_code, wrong.status_code) == (401, 401)
     rows = _rows(ids)
     assert [r[:4] for r in rows] == [

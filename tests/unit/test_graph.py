@@ -8,8 +8,9 @@ from tests.conftest import ScriptedLLM
 
 
 def _section(pid: int, text: str) -> ParentSection:
-    return ParentSection(page_id=pid, doc_key="d", page_key=f"page:{pid}", source_name="f.pdf",
-                         markdown=text, score=1.0, chunk_ids=[pid])
+    return ParentSection(
+        page_id=pid, doc_key="d", page_key=f"page:{pid}", source_name="f.pdf", markdown=text, score=1.0, chunk_ids=[pid]
+    )
 
 
 CORPUS = {"total budget": [_section(1, "Budget for PRJ-7 see appendix")], "PRJ-7": [_section(2, "| PRJ-7 | 4200 |")]}
@@ -19,6 +20,7 @@ def _retriever(calls: list[str]):
     async def retriever(q: str) -> list[ParentSection]:
         calls.append(q)
         return CORPUS.get(q, [])
+
     return retriever
 
 
@@ -28,8 +30,10 @@ def _ask(llm, calls):
 
 
 def test_sufficient_first_pass_synthesizes():
-    llm = ScriptedLLM(SufficiencyVerdict=[SufficiencyVerdict(sufficient=True)],
-                      Answer=[Answer(answer="See appendix.", citations=["d#page:1"])])
+    llm = ScriptedLLM(
+        SufficiencyVerdict=[SufficiencyVerdict(sufficient=True)],
+        Answer=[Answer(answer="See appendix.", citations=["d#page:1"])],
+    )
     calls: list[str] = []
     out = _ask(llm, calls)
     assert out["answer"].answer == "See appendix." and out["attempts"] == 1 and calls == ["total budget"]
@@ -37,9 +41,12 @@ def test_sufficient_first_pass_synthesizes():
 
 def test_missing_identifier_triggers_requery_and_appends_context():
     llm = ScriptedLLM(
-        SufficiencyVerdict=[SufficiencyVerdict(sufficient=False, missing_identifiers=["PRJ-7"]),
-                            SufficiencyVerdict(sufficient=True)],
-        Answer=[Answer(answer="PRJ-7 budget is 4200.", citations=["d#page:2"])])
+        SufficiencyVerdict=[
+            SufficiencyVerdict(sufficient=False, missing_identifiers=["PRJ-7"]),
+            SufficiencyVerdict(sufficient=True),
+        ],
+        Answer=[Answer(answer="PRJ-7 budget is 4200.", citations=["d#page:2"])],
+    )
     calls: list[str] = []
     out = _ask(llm, calls)
     assert calls == ["total budget", "PRJ-7"]
@@ -57,8 +64,9 @@ def test_still_insufficient_after_loop_hits_control_gate():
 
 
 def test_hallucinated_number_is_blocked():
-    llm = ScriptedLLM(SufficiencyVerdict=[SufficiencyVerdict(sufficient=True)],
-                      Answer=[Answer(answer="The budget is 9999.")])
+    llm = ScriptedLLM(
+        SufficiencyVerdict=[SufficiencyVerdict(sufficient=True)], Answer=[Answer(answer="The budget is 9999.")]
+    )
     out = _ask(llm, [])
     assert out["answer"].insufficient and out["answer"].answer == INSUFFICIENT_MESSAGE
 
@@ -69,8 +77,12 @@ def _ask_retrieve_only(llm, calls):
 
 
 def test_retrieve_only_stops_at_sufficient_context_without_synthesizing():
-    llm = ScriptedLLM(SufficiencyVerdict=[SufficiencyVerdict(sufficient=False, missing_identifiers=["PRJ-7"]),
-                                          SufficiencyVerdict(sufficient=True)])  # no Answer script: synthesis would KeyError
+    llm = ScriptedLLM(
+        SufficiencyVerdict=[
+            SufficiencyVerdict(sufficient=False, missing_identifiers=["PRJ-7"]),
+            SufficiencyVerdict(sufficient=True),
+        ]
+    )  # no Answer script: synthesis would KeyError
     out = _ask_retrieve_only(llm, [])
     assert [s.page_id for s in out["sections"]] == [1, 2] and out["attempts"] == 2
     assert out["verdict"].sufficient and "answer" not in out

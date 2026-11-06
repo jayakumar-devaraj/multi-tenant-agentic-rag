@@ -59,7 +59,7 @@ def _import_ragas() -> Any:
         shim = types.ModuleType(name)
         shim.ChatVertexAI = type("ChatVertexAI", (), {})
         sys.modules[name] = shim
-    from ragas import metrics  # noqa: PLC0415 - deferred until the shim is in place
+    from ragas import metrics
 
     return metrics
 
@@ -70,19 +70,21 @@ class RagasTriadScorer:
     def __init__(self, llm: Any, embeddings: Any) -> None:
         """Wrap a LangChain chat model and LangChain embeddings for Ragas."""
         m = _import_ragas()  # installs the shim; must precede every other ragas import
-        from ragas.embeddings import LangchainEmbeddingsWrapper  # noqa: PLC0415
-        from ragas.llms import LangchainLLMWrapper  # noqa: PLC0415
+        from ragas.embeddings import LangchainEmbeddingsWrapper
+        from ragas.llms import LangchainLLMWrapper
 
         rllm, remb = LangchainLLMWrapper(llm), LangchainEmbeddingsWrapper(embeddings)
         self._metrics = {
             "context_relevance": m.ContextRelevance(llm=rllm),
             "groundedness": m.Faithfulness(llm=rllm),
-            "answer_relevance": m.ResponseRelevancy(llm=rllm, embeddings=remb, strictness=1),  # n>1 generations hang on Groq
+            "answer_relevance": m.ResponseRelevancy(
+                llm=rllm, embeddings=remb, strictness=1
+            ),  # n>1 generations hang on Groq
         }
 
     async def __call__(self, question: str, answer: str, contexts: list[str]) -> TriadScores:
         """Score all three metrics concurrently; a metric that errors is logged and left None."""
-        from ragas.dataset_schema import SingleTurnSample  # noqa: PLC0415
+        from ragas.dataset_schema import SingleTurnSample
 
         sample = SingleTurnSample(user_input=question, response=answer, retrieved_contexts=contexts)
         names = list(self._metrics)

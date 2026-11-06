@@ -50,8 +50,12 @@ def build_graph(retriever: Retriever, llm: StructuredLLM, *, retrieve_only: bool
         for q in state["pending_queries"]:
             for s in await retriever(q):
                 sections.setdefault(s.page_id, s)  # new parent context is appended, never replaced
-        return {"sections": list(sections.values()), "attempts": state.get("attempts", 0) + 1,
-                "queries_run": state.get("queries_run", []) + state["pending_queries"], "pending_queries": []}
+        return {
+            "sections": list(sections.values()),
+            "attempts": state.get("attempts", 0) + 1,
+            "queries_run": state.get("queries_run", []) + state["pending_queries"],
+            "pending_queries": [],
+        }
 
     async def evaluate(state: RagState) -> dict:
         if not state["sections"]:
@@ -80,8 +84,13 @@ def build_graph(retriever: Retriever, llm: StructuredLLM, *, retrieve_only: bool
         return {"answer": Answer(answer=INSUFFICIENT_MESSAGE, insufficient=True)}
 
     g = StateGraph(RagState)
-    for name, fn in [("retrieve", retrieve), ("evaluate", evaluate), ("requery", requery),
-                     ("synthesize", generate), ("fallback", fallback)]:
+    for name, fn in [
+        ("retrieve", retrieve),
+        ("evaluate", evaluate),
+        ("requery", requery),
+        ("synthesize", generate),
+        ("fallback", fallback),
+    ]:
         g.add_node(name, _timed(name, fn))
     g.add_edge(START, "retrieve")
     g.add_edge("retrieve", "evaluate")

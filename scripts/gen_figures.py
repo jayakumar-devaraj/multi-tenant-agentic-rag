@@ -24,7 +24,7 @@ def collected(marker: str | None) -> int:
     """Number of tests selected by `-m marker` (the default selection when None)."""
     cmd = [sys.executable, "-m", "pytest", "--collect-only", "-q", "-p", "no:cacheprovider"]
     out = subprocess.run(
-        cmd + (["-m", marker] if marker else []), cwd=ROOT, capture_output=True, text=True
+        cmd + (["-m", marker] if marker else []), cwd=ROOT, capture_output=True, text=True, check=False
     ).stdout
     match = re.search(r"(\d+)(?:/\d+)? tests? collected", out)
     if not match:
@@ -35,9 +35,7 @@ def collected(marker: str | None) -> int:
 def coverage() -> dict[str, object]:
     """Total coverage, statements and the first line of the committed CI coverage report."""
     lines = COVERAGE.read_text(encoding="utf-8").splitlines()
-    total = next(
-        (m for line in lines if (m := re.match(r"TOTAL\s+(\d+)\s+(\d+)\s+(\d+)%", line))), None
-    )
+    total = next((m for line in lines if (m := re.match(r"TOTAL\s+(\d+)\s+(\d+)\s+(\d+)%", line))), None)
     if total is None:
         raise SystemExit(f"{COVERAGE.name} has no TOTAL line")
     header = next((line for line in lines if line.strip()), "")
@@ -73,15 +71,11 @@ def main() -> int:
     text = SUMMARY.read_text(encoding="utf-8")
     if START not in text or END not in text:
         raise SystemExit(f"{SUMMARY.name} has no {START} ... {END} block")
-    new_text = re.sub(
-        f"{re.escape(START)}.*?{re.escape(END)}", lambda _: block(f), text, flags=re.DOTALL
-    )
+    new_text = re.sub(f"{re.escape(START)}.*?{re.escape(END)}", lambda _: block(f), text, flags=re.DOTALL)
     new_json = json.dumps(f, indent=2) + "\n"
     if "--check" in sys.argv:
         current = FIGURES.exists() and FIGURES.read_text(encoding="utf-8") == new_json
-        stale = [
-            n for n, ok in ((FIGURES.name, current), (SUMMARY.name, new_text == text)) if not ok
-        ]
+        stale = [n for n, ok in ((FIGURES.name, current), (SUMMARY.name, new_text == text)) if not ok]
         for name in stale:
             print(f"{name} is out of date: run `uv run python scripts/gen_figures.py`")
         return 1 if stale else 0

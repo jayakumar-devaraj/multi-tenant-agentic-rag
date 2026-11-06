@@ -19,9 +19,12 @@ if sys.platform == "win32":  # psycopg async needs a selector loop; TestClient's
 def test_ingest_then_self_correcting_chat_across_docx_and_xlsx(monkeypatch, tenant):
     monkeypatch.setenv("TENANT_TOKENS", f"tok-a:{tenant},tok-b:{tenant}-other")
     llm = ScriptedLLM(
-        SufficiencyVerdict=[SufficiencyVerdict(sufficient=False, missing_identifiers=["Servers"]),
-                            SufficiencyVerdict(sufficient=True)],
-        Answer=[Answer(answer="Servers cost 4200; north sales were 100.", citations=["r.docx#page:1"])])
+        SufficiencyVerdict=[
+            SufficiencyVerdict(sufficient=False, missing_identifiers=["Servers"]),
+            SufficiencyVerdict(sufficient=True),
+        ],
+        Answer=[Answer(answer="Servers cost 4200; north sales were 100.", citations=["r.docx#page:1"])],
+    )
     with TestClient(create_app(Services(embedder=FakeEmbedder(), llm=llm, triad=None))) as client:
         _exercise(client)
 
@@ -53,14 +56,20 @@ class RecordingTriad:
         from src.eval.triad import TriadScores
 
         self.seen.append((question, answer, contexts))
-        return TriadScores(context_relevance=0.9, groundedness=1.0, answer_relevance=0.8,
-                           numeric_groundedness=1.0, unsupported_numbers=[])
+        return TriadScores(
+            context_relevance=0.9,
+            groundedness=1.0,
+            answer_relevance=0.8,
+            numeric_groundedness=1.0,
+            unsupported_numbers=[],
+        )
 
 
 def test_triad_is_scored_logged_and_returned_with_the_answer(monkeypatch, tenant, caplog):
     monkeypatch.setenv("TENANT_TOKENS", f"tok-a:{tenant}")
-    llm = ScriptedLLM(SufficiencyVerdict=[SufficiencyVerdict(sufficient=True)],
-                      Answer=[Answer(answer="North sales were 100.")])
+    llm = ScriptedLLM(
+        SufficiencyVerdict=[SufficiencyVerdict(sufficient=True)], Answer=[Answer(answer="North sales were 100.")]
+    )
     triad = RecordingTriad()
     a = {"Authorization": "Bearer tok-a"}
     with TestClient(create_app(Services(embedder=FakeEmbedder(), llm=llm, triad=triad))) as client:
@@ -85,8 +94,9 @@ class TimingOutTriad:
 
 def test_triad_timeout_still_returns_answer_with_numeric_score(monkeypatch, tenant):
     monkeypatch.setenv("TENANT_TOKENS", f"tok-a:{tenant}")
-    llm = ScriptedLLM(SufficiencyVerdict=[SufficiencyVerdict(sufficient=True)],
-                      Answer=[Answer(answer="North sales were 100.")])
+    llm = ScriptedLLM(
+        SufficiencyVerdict=[SufficiencyVerdict(sufficient=True)], Answer=[Answer(answer="North sales were 100.")]
+    )
     a = {"Authorization": "Bearer tok-a"}
     with TestClient(create_app(Services(embedder=FakeEmbedder(), llm=llm, triad=TimingOutTriad()))) as client:
         xlsx = make_xlsx({"Q1": [["Region", "Sales"], ["North", 100]]})

@@ -14,7 +14,10 @@ pytestmark = pytest.mark.integration
 
 
 def test_query_never_returns_another_tenants_rows(conn):
-    a, b = Session(tenant_id=f"a-{uuid.uuid4().hex[:8]}", subject="test"), Session(tenant_id=f"b-{uuid.uuid4().hex[:8]}", subject="test")
+    a, b = (
+        Session(tenant_id=f"a-{uuid.uuid4().hex[:8]}", subject="test"),
+        Session(tenant_id=f"b-{uuid.uuid4().hex[:8]}", subject="test"),
+    )
     emb = FakeEmbedder()
     shared = [["Serial", "Owner"], ["SN-4471", "finance"]]
     run(ingest_file(conn, emb, a.tenant_id, "assets.xlsx", make_xlsx({"S": shared + [["SN-1", "tenant-a-only"]]})))

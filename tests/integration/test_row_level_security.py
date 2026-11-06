@@ -43,13 +43,17 @@ def db() -> Iterator[tuple[str, str]]:
         with scratch_database(admin, database_url()) as owner_url:
             upgrade_head(owner_url, app_role=role)
             for t in TENANTS:
-                run(_exec(owner_url,
-                          f"WITH p AS (INSERT INTO page_registry (tenant_id, doc_key, page_key, sha256, source_name, "
-                          f"markdown) VALUES ('{t}', 'd', 'p', '{SHA}', 's', 'text of {t}') RETURNING id), "
-                          f"c AS (INSERT INTO chunks (tenant_id, page_id, ord, content, embedding) "
-                          f"SELECT '{t}', id, 0, 'alpha bravo {t}', {VECTOR} FROM p RETURNING id) "
-                          f"INSERT INTO audit_log (tenant_id, subject, action, outcome) "
-                          f"VALUES ('{t}', 's', 'chat', 'ok') RETURNING 1"))
+                run(
+                    _exec(
+                        owner_url,
+                        f"WITH p AS (INSERT INTO page_registry (tenant_id, doc_key, page_key, sha256, source_name, "
+                        f"markdown) VALUES ('{t}', 'd', 'p', '{SHA}', 's', 'text of {t}') RETURNING id), "
+                        f"c AS (INSERT INTO chunks (tenant_id, page_id, ord, content, embedding) "
+                        f"SELECT '{t}', id, 0, 'alpha bravo {t}', {VECTOR} FROM p RETURNING id) "
+                        f"INSERT INTO audit_log (tenant_id, subject, action, outcome) "
+                        f"VALUES ('{t}', 's', 'chat', 'ok') RETURNING 1",
+                    )
+                )
             yield owner_url, with_credentials(owner_url, role, password)
     finally:
         run(admin.execute(f"DROP ROLE IF EXISTS {role}"))
@@ -58,11 +62,17 @@ def db() -> Iterator[tuple[str, str]]:
 
 def test_policies_are_forced_and_the_app_role_cannot_bypass_them(db):
     owner_url, _ = db
-    flags = run(_exec(owner_url, "SELECT relname, relrowsecurity, relforcerowsecurity FROM pg_class "
-                                 "WHERE relname IN ('page_registry', 'chunks', 'audit_log') ORDER BY relname"))
+    flags = run(
+        _exec(
+            owner_url,
+            "SELECT relname, relrowsecurity, relforcerowsecurity FROM pg_class "
+            "WHERE relname IN ('page_registry', 'chunks', 'audit_log') ORDER BY relname",
+        )
+    )
     assert flags == [("audit_log", True, True), ("chunks", True, True), ("page_registry", True, True)]
-    assert run(_exec(owner_url, "SELECT bool_or(rolsuper OR rolbypassrls) FROM pg_roles "
-                                "WHERE rolname LIKE 'app\\_%'")) == [(False,)]
+    assert run(
+        _exec(owner_url, "SELECT bool_or(rolsuper OR rolbypassrls) FROM pg_roles WHERE rolname LIKE 'app\\_%'")
+    ) == [(False,)]
 
 
 @pytest.mark.parametrize("table", ["page_registry", "chunks", "audit_log"])
@@ -81,10 +91,14 @@ def test_a_statement_without_a_tenant_predicate_sees_only_the_bound_tenant(db, t
 def test_writing_another_tenants_rows_is_denied(db):
     _, app_url = db
     for sql in (
-        f"INSERT INTO page_registry (tenant_id, doc_key, page_key, sha256, source_name, markdown) "
-        f"VALUES ('bravo', 'x', 'x', '{SHA}', 's', 'm')",
-        f"INSERT INTO chunks (tenant_id, page_id, ord, content, embedding) "
-        f"SELECT 'bravo', id, 1, 'c', {VECTOR} FROM page_registry",
+        (
+            f"INSERT INTO page_registry (tenant_id, doc_key, page_key, sha256, source_name, markdown) "
+            f"VALUES ('bravo', 'x', 'x', '{SHA}', 's', 'm')"
+        ),
+        (
+            f"INSERT INTO chunks (tenant_id, page_id, ord, content, embedding) "
+            f"SELECT 'bravo', id, 1, 'c', {VECTOR} FROM page_registry"
+        ),
         "INSERT INTO audit_log (tenant_id, subject, action, outcome) VALUES ('bravo', 's', 'chat', 'ok')",
         "UPDATE page_registry SET tenant_id = 'bravo'",
         "UPDATE chunks SET tenant_id = 'bravo'",
@@ -103,10 +117,15 @@ def test_deleting_or_updating_another_tenants_rows_touches_nothing(db):
 
 def test_deleting_a_page_still_cascades_to_its_chunks(db):
     owner_url, app_url = db
-    run(_exec(owner_url, f"WITH p AS (INSERT INTO page_registry (tenant_id, doc_key, page_key, sha256, source_name, "
-                         f"markdown) VALUES ('alpha', 'gone', 'p', '{SHA}', 's', 'm') RETURNING id) "
-                         f"INSERT INTO chunks (tenant_id, page_id, ord, content, embedding) "
-                         f"SELECT 'alpha', id, 0, 'c', {VECTOR} FROM p RETURNING 1"))
+    run(
+        _exec(
+            owner_url,
+            f"WITH p AS (INSERT INTO page_registry (tenant_id, doc_key, page_key, sha256, source_name, "
+            f"markdown) VALUES ('alpha', 'gone', 'p', '{SHA}', 's', 'm') RETURNING id) "
+            f"INSERT INTO chunks (tenant_id, page_id, ord, content, embedding) "
+            f"SELECT 'alpha', id, 0, 'c', {VECTOR} FROM p RETURNING 1",
+        )
+    )
     assert run(_exec(app_url, "DELETE FROM page_registry WHERE doc_key = 'gone'", tenant="alpha")) == [(1,)]
     assert run(_exec(owner_url, "SELECT count(*) FROM chunks WHERE content = 'c'")) == [(0,)]
 
@@ -139,7 +158,9 @@ def test_a_pooled_connection_never_carries_a_tenant_to_its_next_borrower(db):
                 out["alpha"] = await (await c.execute("SELECT markdown FROM page_registry")).fetchall()
             async with pool.connection() as c:
                 out["unbound_pid"] = (await (await c.execute("SELECT pg_backend_pid()")).fetchone())[0]
-                out["setting"] = (await (await c.execute("SELECT current_setting('app.tenant_id', true)")).fetchone())[0]
+                out["setting"] = (await (await c.execute("SELECT current_setting('app.tenant_id', true)")).fetchone())[
+                    0
+                ]
                 out["unbound"] = (await (await c.execute("SELECT count(*) FROM page_registry")).fetchone())[0]
             async with tenant_transaction(pool, "bravo") as c:
                 out["bravo"] = await (await c.execute("SELECT markdown FROM page_registry")).fetchall()
