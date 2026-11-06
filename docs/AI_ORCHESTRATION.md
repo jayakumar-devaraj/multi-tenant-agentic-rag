@@ -45,6 +45,10 @@ Build-process record: one row per merge. Runtime audit trail is separate (applic
 | Version 0.2.1 | files changed (by path): other 2 | chore/release-0.2.1 | #41 | b045e33f |
 | Run fastembed on one ONNX Runtime thread | files changed (by path): code 1, docs 3, other 1, tests 1 | perf/fastembed-threads | #42 | b045e33f |
 | Log PRs #32-#42 in the orchestration record | files changed (by path): docs 1 | docs/orchestration-log-33-42 | #43 | b045e33f |
+| Freeze the docs at 648df6f: CI coverage, summary and the log through #43 | files changed (by path): docs 5 | docs/freeze-2026-11-03 | #44 | b045e33f |
+| Version 0.2.2 | files changed (by path): other 2 | chore/release-0.2.2 | #45 | b045e33f |
+| Rename the prompt files by role and make the time limit an input | files changed (by path): docs 6 | docs/rename-prompts-and-time-limit | #46 | 8c17210e |
+| Add the audit follow-ups for the RAG service | files changed (by path): docs 1 | docs/audit-followups | #47 | 8c17210e |
 
 
 
@@ -162,3 +166,7 @@ Docker image and compose change.
 - **#38–#42 (2026-11-03):** Prometheus request metrics on their own port with no tenant label (ADR 0004);
   releases v0.2.0 and v0.2.1, the second also publishing the migrate image the chatbot now runs; fastembed
   on one ONNX Runtime thread (ADR 0005).
+- **#44–#47 (2026-11-03 to 2026-11-06):** documentation freeze, release v0.2.2, the prompt-file rename and
+  the audit follow-ups.
+- **Rename:** the eval prompt V2 row above keeps its original path as history; since #46 that file is
+  `docs/prompts/evaluation-rubric-v2.md`.
