@@ -1,0 +1,35 @@
+[
+  {"id": "q01", "category": "exact_id", "question": "What does SEC-POL-014 require?", "relevant": [["it-security-policy.pdf", "page:1"]]},
+  {"id": "q02", "category": "exact_id", "question": "Which supplier holds contract CT-2058?", "relevant": [["supplier-contracts.xlsx", "tab:Contracts"]]},
+  {"id": "q03", "category": "exact_id", "question": "How many notice days does CT-2042 need?", "relevant": [["supplier-contracts.xlsx", "tab:Renewals"]]},
+  {"id": "q04", "category": "exact_id", "question": "When do I follow runbook IR-RB-07?", "relevant": [["it-security-policy.pdf", "page:3"]]},
+  {"id": "q05", "category": "exact_id", "question": "When is form FM-101 filled in?", "relevant": [["fleet-maintenance.pdf", "page:1"]]},
+
+  {"id": "q06", "category": "paraphrase", "question": "How much holiday can I roll over to next year?", "relevant": [["employee-handbook.pdf", "page:1"]]},
+  {"id": "q07", "category": "paraphrase", "question": "When do I need a medical note if I am ill?", "relevant": [["employee-handbook.pdf", "page:2"]]},
+  {"id": "q08", "category": "paraphrase", "question": "What is the most I can spend on a room when travelling for work?", "relevant": [["employee-handbook.pdf", "page:3"]]},
+  {"id": "q09", "category": "paraphrase", "question": "Can I do my job from abroad for a while?", "relevant": [["employee-handbook.pdf", "page:4"]]},
+  {"id": "q10", "category": "paraphrase", "question": "How long do new mothers get off?", "relevant": [["employee-handbook.pdf", "page:5"]]},
+  {"id": "q11", "category": "paraphrase", "question": "A customer gave me an expensive present, what do I do?", "relevant": [["employee-handbook.pdf", "page:6"]]},
+  {"id": "q12", "category": "paraphrase", "question": "How fast must we shut off someone's login after they quit?", "relevant": [["it-security-policy.pdf", "page:2"]]},
+  {"id": "q13", "category": "paraphrase", "question": "How long do we hang on to client data once a deal finishes?", "relevant": [["it-security-policy.pdf", "page:4"]]},
+  {"id": "q14", "category": "paraphrase", "question": "We have been hacked, who do I ring?", "relevant": [["it-security-policy.pdf", "page:3"]]},
+  {"id": "q15", "category": "paraphrase", "question": "How worn can the rubber get before a lorry needs new wheels fitted?", "relevant": [["fleet-maintenance.pdf", "page:2"]]},
+  {"id": "q16", "category": "paraphrase", "question": "My truck died on the highway, what should I do?", "relevant": [["fleet-maintenance.pdf", "page:5"]]},
+  {"id": "q17", "category": "paraphrase", "question": "How long may an engine sit running while parked?", "relevant": [["fleet-maintenance.pdf", "page:4"]]},
+  {"id": "q18", "category": "paraphrase", "question": "How long does it take to assess a new client's finances?", "relevant": [["customer-onboarding.docx", "page:1"]]},
+  {"id": "q19", "category": "paraphrase", "question": "What did the directors decide about battery-powered vehicles?", "relevant": [["board-minutes-march.docx", "page:1"]]},
+  {"id": "q20", "category": "paraphrase", "question": "How often must lift-truck operators requalify?", "relevant": [["warehouse-procedures.txt", "page:1"]]},
+
+  {"id": "q21", "category": "table", "question": "What revenue did the East region make in Q2?", "relevant": [["sales-2026.xlsx", "tab:Q2"]]},
+  {"id": "q22", "category": "table", "question": "Who was the top customer in the South in Q3?", "relevant": [["sales-2026.xlsx", "tab:Q3"]]},
+  {"id": "q23", "category": "table", "question": "How many shipments did West handle in Q1?", "relevant": [["sales-2026.xlsx", "tab:Q1"]]},
+  {"id": "q24", "category": "table", "question": "Who leads the North region and what is its annual target?", "relevant": [["sales-2026.xlsx", "tab:Targets"]]},
+  {"id": "q25", "category": "table", "question": "What credit do we get if breakdown recovery misses its service level?", "relevant": [["supplier-contracts.xlsx", "tab:Penalties"]]},
+  {"id": "q26", "category": "table", "question": "When does the tyre supply agreement end?", "relevant": [["supplier-contracts.xlsx", "tab:Contracts"]]},
+
+  {"id": "q27", "category": "cross_section", "question": "What should a driver do after a breakdown, and what is the annual value of the recovery contract?", "relevant": [["fleet-maintenance.pdf", "page:5"], ["supplier-contracts.xlsx", "tab:Contracts"]]},
+  {"id": "q28", "category": "cross_section", "question": "How long is CCTV footage kept, and who supplies CCTV monitoring?", "relevant": [["it-security-policy.pdf", "page:4"], ["supplier-contracts.xlsx", "tab:Contracts"]]},
+  {"id": "q29", "category": "cross_section", "question": "How many days a week can I work from home, and how many failed logins lock my account?", "relevant": [["employee-handbook.pdf", "page:4"], ["it-security-policy.pdf", "page:1"]]},
+  {"id": "q30", "category": "cross_section", "question": "How many litres can go on a fuel card per fill, and how much notice does the fuel card contract need?", "relevant": [["fleet-maintenance.pdf", "page:4"], ["supplier-contracts.xlsx", "tab:Renewals"]]}
+]
