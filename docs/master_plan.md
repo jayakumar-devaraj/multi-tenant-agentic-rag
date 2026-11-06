@@ -1,6 +1,6 @@
 # Master Plan
 
-Single source of truth for the build governed by `docs/prompts/on_site_coding_challenge.md`.
+Single source of truth for the build governed by `docs/prompts/agent-build-prompt.md`.
 Any agreed cut updates this file in the same commit as the cut.
 
 - Start 21:34 CDT · Deadline 23:34 CDT (2 h) · Reserve 30 min · Phase 3 floor 20 min.

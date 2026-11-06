@@ -18,11 +18,12 @@ requirements: single process, single repo, unless I explicitly override.
   you, quote it and ask before acting on it.
 
 # INPUT
-- Problem statement: `docs/prompts/enterprise_rag_assignment.md`
-- Rubric (how the repo is scored): `docs/prompts/coding_challenge_eval_prompt.md`
-- This prompt's committed copy (PROMPT_PATH): `docs/prompts/on_site_coding_challenge.md`
-- Deadline: 2 hours
-- Start time: <HH:MM>
+- Problem statement: `docs/prompts/problem-statement.md`
+- Rubric (how the repo is scored): `docs/prompts/evaluation-rubric-v1.md`
+- This prompt's committed copy (PROMPT_PATH): `docs/prompts/agent-build-prompt.md`
+- Deadline: <HOURS> (an input: ask the lead before Step 0; never assume a default)
+- Start time: <HH:MM> (an input: ask the lead, or read the clock and confirm it)
+- If either input is still a placeholder, stop and ask; every time rule below is computed from them.
 
 All paths are relative to repo root. A field that is blank or holds placeholder text (`<...>`,
 `[fill in]`, `e.g.`) is unset.
