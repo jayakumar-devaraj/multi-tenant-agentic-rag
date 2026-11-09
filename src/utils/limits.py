@@ -2,7 +2,7 @@
 
 Counters live in Postgres (`tenant_usage`, migration 0004), so every API replica enforces the same limit.
 A window is one minute; each call increments its tenant's row atomically and the row's count decides.
-Rejected calls count too, so hammering does not reset the window.
+The count commits before the refusal is raised, so rejected calls stay counted.
 """
 
 import os
@@ -60,14 +60,12 @@ class Limits:
         return self.query_per_min if action == "query" else self.ingest_per_min
 
 
-async def take(
-    conn: psycopg.AsyncConnection, tenant_id: str, action: Action, limit: int, now: datetime | None = None
-) -> None:
-    """Count one call in the tenant's current window; RateLimited once the window's count exceeds `limit`.
+async def take(conn: psycopg.AsyncConnection, tenant_id: str, action: Action, now: datetime) -> int:
+    """Count one call in the tenant's current window and return the window's count.
 
-    `conn` is bound to `tenant_id` (row-level security); the caller commits.
+    `conn` is bound to `tenant_id` (row-level security). The caller commits, then calls `enforce`: raising
+    inside the transaction would roll the count back.
     """
-    now = now or datetime.now(UTC)
     window = now.replace(second=0, microsecond=0)
     row = await (
         await conn.execute(
@@ -83,7 +81,13 @@ async def take(
         "DELETE FROM tenant_usage WHERE tenant_id = %s AND action = %s AND window_start < %s",
         (tenant_id, action, window),
     )
-    if row is not None and row[0] > limit:
+    return int(row[0]) if row else 0
+
+
+def enforce(action: Action, count: int, limit: int, now: datetime) -> None:
+    """RateLimited once a committed window `count` exceeds `limit`."""
+    if count > limit:
+        window = now.replace(second=0, microsecond=0)
         raise RateLimited(action, max(1, int((window + WINDOW - now).total_seconds())))
 
 

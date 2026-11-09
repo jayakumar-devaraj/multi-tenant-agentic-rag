@@ -13,8 +13,8 @@ fill the shared database.
   `Retry-After` (seconds to the next window).
 - **Counters in Postgres** (`tenant_usage`, migration 0004), so every replica enforces one limit. A call
   increments its tenant's row for the current one-minute window with one atomic upsert, in its own committed
-  transaction, before any work: refused calls count too, and the work's rollback cannot undo the count.
-  The row is protected by the same row-level security as the documents.
+  transaction, before any work. The refusal is raised only after that commit, so refused calls stay counted,
+  and the work's rollback cannot undo the count. The row is protected by the same row-level security as the documents.
 - **Document quota:** `TENANT_MAX_DOCUMENTS` (default 1000) distinct documents. It is checked inside the
   ingest transaction after the document key is resolved, so a new document past the quota is 429 (no
   `Retry-After`) and rolls back with nothing stored; re-ingesting a document the tenant already holds is
