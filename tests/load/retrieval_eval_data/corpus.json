@@ -1,0 +1,85 @@
+{
+  "_note": "Synthetic documents for a fictional freight company, written for this eval. Not real data.",
+  "documents": [
+    {
+      "name": "employee-handbook.pdf",
+      "format": "pdf",
+      "pages": [
+        {"title": "Annual leave", "body": "Full-time staff accrue 25 days of paid annual leave per calendar year. Up to five unused days may be carried into the next year and must be used by 31 March. Requests longer than ten consecutive working days need approval from a department head at least six weeks ahead."},
+        {"title": "Sickness absence", "body": "Employees who cannot attend work must tell their line manager before 09:00 on the first day. A doctor's certificate is required after seven calendar days. Sick pay is at full salary for the first 20 working days in any rolling twelve months and at half salary for the next 40."},
+        {"title": "Business expenses", "body": "Claims are submitted through FinTrack within 30 days of the cost. Hotels are capped at 140 euros per night, or 190 euros in capital cities. Meals are reimbursed up to 45 euros per day. Receipts are needed for anything above 15 euros. Rail travel is standard class except on journeys over three hours."},
+        {"title": "Remote working", "body": "Staff may work from home up to three days per week after completing probation. Core hours are 10:00 to 15:00. A one-off home office allowance of 400 euros is available. Working from another country is limited to 20 days per year and needs HR approval because of tax rules."},
+        {"title": "Parental leave", "body": "Birth parents receive 26 weeks at full pay and second parents receive 8 weeks. HR must be notified by the 15th week before the due date. A phased return at 60 percent of normal hours is offered for four weeks at full pay."},
+        {"title": "Conduct and gifts", "body": "Gifts worth more than 50 euros are declared in the gift register within five working days. Harassment can be reported through the confidential line. Breaches are investigated by Compliance, and gross misconduct may lead to dismissal without notice."}
+      ]
+    },
+    {
+      "name": "it-security-policy.pdf",
+      "format": "pdf",
+      "pages": [
+        {"title": "Passwords and multi-factor authentication", "body": "Policy reference SEC-POL-014. Passwords have at least 14 characters and are changed only when compromise is suspected. Multi-factor authentication through an authenticator app is mandatory for all remote access; SMS codes are not accepted. Accounts lock for 15 minutes after 8 failed attempts."},
+        {"title": "Access reviews", "body": "Managers recertify the system access of their direct reports every quarter. The accounts of leavers are disabled within 4 hours of notification from HR. Privileged access expires after 8 hours and is requested through a PAM-REQ ticket."},
+        {"title": "Incident response", "body": "Suspected security incidents are reported to the Security Operations Centre on hotline 7711 within 30 minutes, following runbook IR-RB-07. Severity 1 incidents convene the response team within one hour. Regulators are notified within 72 hours when personal data is affected."},
+        {"title": "Data retention", "body": "Customer records are retained for seven years after the end of the contract. Application logs are kept for 13 months, backups for 35 days and CCTV footage for 30 days. Deletion requests are completed within one month."},
+        {"title": "Vendor security", "body": "Vendors that process personal data complete security questionnaire VQ-22 before contract signature. They provide an ISO 27001 certificate or a SOC 2 Type II report every year. High-risk vendors also share a penetration test summary."}
+      ]
+    },
+    {
+      "name": "fleet-maintenance.pdf",
+      "format": "pdf",
+      "pages": [
+        {"title": "Inspection schedule", "body": "Every truck receives a daily walk-round check before departure, recorded on form FM-101. A full safety inspection takes place every 10 weeks at an approved workshop, and a statutory annual test is booked two months before it falls due."},
+        {"title": "Tyres", "body": "Minimum tread depth is 3 mm on the steer axle and 2 mm on drive and trailer axles. Tyres older than 8 years are removed from service whatever their tread. Pressures are checked weekly by the depot fitter."},
+        {"title": "Brakes", "body": "A brake roller test is part of each safety inspection. Pads are replaced at 4 mm. If air pressure drops below 6 bar the vehicle goes off the road immediately and the transport manager is told."},
+        {"title": "Fuel and AdBlue", "body": "Fuel cards are limited to 600 litres per fill. AdBlue is topped up when the tank reaches one quarter. Idling is limited to 3 minutes while stationary. The fleet consumption target is 31 litres per 100 kilometres."},
+        {"title": "Breakdown procedure", "body": "Drivers switch on hazard lights, place a warning triangle 45 metres behind the vehicle and, on a motorway, wait behind the barrier. They then call the 24-hour desk on 0800 555 0147, which dispatches the recovery contractor RoadAid with a 90 minute arrival target."}
+      ]
+    },
+    {
+      "name": "sales-2026.xlsx",
+      "format": "xlsx",
+      "tabs": {
+        "Q1": [["Region", "Revenue", "Shipments", "Top customer"], ["North", 412000, 1830, "Aalto Foods"], ["South", 365500, 1490, "Brenner Steel"], ["East", 298750, 1215, "Castell Paper"], ["West", 251000, 1040, "Dorn Logistics"]],
+        "Q2": [["Region", "Revenue", "Shipments", "Top customer"], ["North", 438200, 1902, "Aalto Foods"], ["South", 351900, 1455, "Elba Ceramics"], ["East", 322400, 1310, "Castell Paper"], ["West", 270650, 1122, "Fenwick Glass"]],
+        "Q3": [["Region", "Revenue", "Shipments", "Top customer"], ["North", 401300, 1770, "Garnet Mills"], ["South", 389750, 1601, "Brenner Steel"], ["East", 340100, 1388, "Hollis Timber"], ["West", 265200, 1098, "Fenwick Glass"]],
+        "Targets": [["Region", "Annual target", "Regional lead"], ["North", 1700000, "Mira Solberg"], ["South", 1500000, "Tomas Reyes"], ["East", 1300000, "Ines Okafor"], ["West", 1100000, "Pavel Novak"]]
+      }
+    },
+    {
+      "name": "supplier-contracts.xlsx",
+      "format": "xlsx",
+      "tabs": {
+        "Contracts": [["Contract ID", "Supplier", "Service", "Annual value", "End date"], ["CT-2041", "RoadAid", "Breakdown recovery", 186000, "2027-06-30"], ["CT-2042", "Tyrewell", "Tyre supply", 342000, "2027-01-31"], ["CT-2058", "FuelNet", "Fuel cards", 1250000, "2026-12-31"], ["CT-2063", "SafeSkan", "CCTV monitoring", 64000, "2028-03-31"]],
+        "Renewals": [["Contract ID", "Notice days", "Auto renew", "Owner"], ["CT-2041", 90, "yes", "Procurement"], ["CT-2042", 60, "no", "Fleet"], ["CT-2058", 120, "yes", "Finance"], ["CT-2063", 30, "no", "Facilities"]],
+        "Penalties": [["Contract ID", "Service level", "Credit if missed"], ["CT-2041", "Recovery within 90 minutes", "5% of monthly fee"], ["CT-2042", "Delivery within 48 hours", "2% of monthly fee"], ["CT-2058", "Card outage under 4 hours", "10% of monthly fee"]]
+      }
+    },
+    {
+      "name": "customer-onboarding.docx",
+      "format": "docx",
+      "heading": "Customer onboarding",
+      "paragraphs": [
+        "A credit check through Creditsafe is completed within 2 working days of the application.",
+        "The standard credit limit is 25000 euros; anything above it needs approval from the sales director.",
+        "Identity documents and a company registration extract are collected before the first shipment.",
+        "The account manager makes a welcome call within 5 working days and issues an account code in the format HF-C-00000."
+      ]
+    },
+    {
+      "name": "board-minutes-march.docx",
+      "format": "docx",
+      "heading": "Board minutes, March meeting",
+      "paragraphs": [
+        "The board approved the purchase of 12 electric trucks for 2.1 million euros, with delivery phased over 18 months.",
+        "The lease of the Rotterdam depot was extended until 2031.",
+        "The dividend was paused for the current financial year so that the charging infrastructure can be funded.",
+        "The next meeting is on 18 June."
+      ]
+    },
+    {
+      "name": "warehouse-procedures.txt",
+      "format": "txt",
+      "text": "Warehouse procedures\n\nForklift certification is renewed every 3 years, and uncertified staff may not operate one. Dangerous goods of class 3 are stored only in Zone D. Goods received are checked against the delivery note within 2 hours of unloading. A stock count takes place on the last Friday of each month. High-visibility clothing and safety boots are compulsory on the warehouse floor."
+    }
+  ]
+}
