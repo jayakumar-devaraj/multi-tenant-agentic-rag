@@ -8,7 +8,9 @@ from tests.conftest import make_docx, make_pdf, make_xlsx
 
 
 def test_xlsx_each_tab_is_a_unit_with_coordinates():
-    data = make_xlsx({"Q1": [["Region", "Sales"], ["North", 100], ["South", 80]], "Q2": [["Region", "Sales"], ["North", 120]]})
+    data = make_xlsx(
+        {"Q1": [["Region", "Sales"], ["North", 100], ["South", 80]], "Q2": [["Region", "Sales"], ["North", 120]]}
+    )
     units = worker_for("book.xlsx").extract(data)
     assert [u.page_key for u in units] == ["tab:Q1", "tab:Q2"]
     q1 = units[0].markdown
@@ -22,8 +24,12 @@ def test_xlsx_formula_without_cached_value_is_kept():
 
 
 def test_pdf_table_becomes_markdown_grid_per_page():
-    data = make_pdf([("Invoice page one", [["ID", "Amount"], ["INV-001", "250"]]),
-                     ("Invoice page two", [["ID", "Amount"], ["INV-002", "900"]])])
+    data = make_pdf(
+        [
+            ("Invoice page one", [["ID", "Amount"], ["INV-001", "250"]]),
+            ("Invoice page two", [["ID", "Amount"], ["INV-002", "900"]]),
+        ]
+    )
     units = worker_for("x.pdf").extract(data)
     assert [u.page_key for u in units] == ["page:1", "page:2"]
     assert "Invoice page one" in units[0].markdown

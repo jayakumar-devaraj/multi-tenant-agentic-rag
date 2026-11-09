@@ -41,7 +41,9 @@ def _split_table(table: str, context: str) -> list[str]:
     lines = table.split("\n")
     header, rows = lines[:2], lines[2:]
     prefix = f"{context}\n\n" if context else ""
-    return [prefix + "\n".join(header + rows[i : i + MAX_TABLE_ROWS]) for i in range(0, max(len(rows), 1), MAX_TABLE_ROWS)]
+    return [
+        prefix + "\n".join(header + rows[i : i + MAX_TABLE_ROWS]) for i in range(0, max(len(rows), 1), MAX_TABLE_ROWS)
+    ]
 
 
 def chunk(markdown: str) -> list[str]:

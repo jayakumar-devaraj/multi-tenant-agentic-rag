@@ -6,6 +6,7 @@ tenant's older windows as it goes. Row-level security confines each connection t
 Revision ID: 0004
 Revises: 0003
 """
+
 from alembic import op
 
 revision = "0004"

@@ -43,7 +43,12 @@ def test_fresh_database_reaches_head_and_upgrade_is_idempotent(conn):
 def test_database_from_the_old_init_script_is_adopted_without_data_loss(conn):
     with scratch_database(conn, database_url()) as url:
         run(_run_script(url, BASELINE_SQL))
-        run(_fetch(url, f"INSERT INTO page_registry (tenant_id, doc_key, page_key, sha256, source_name, markdown) VALUES ('t', 'd', 'p', '{SHA}', 's', 'm') RETURNING 1"))
+        run(
+            _fetch(
+                url,
+                f"INSERT INTO page_registry (tenant_id, doc_key, page_key, sha256, source_name, markdown) VALUES ('t', 'd', 'p', '{SHA}', 's', 'm') RETURNING 1",
+            )
+        )
         upgrade_head(url)
         rows = run(_fetch(url, "SELECT tenant_id, doc_key FROM page_registry"))
     assert rows == [("t", "d")]
@@ -56,7 +61,13 @@ def test_app_role_has_least_privilege(conn):
         with scratch_database(conn, database_url()) as owner_url:
             upgrade_head(owner_url, app_role=role)
             app_url = with_credentials(owner_url, role, password)
-            run(_fetch(app_url, "INSERT INTO audit_log (tenant_id, subject, action, outcome) VALUES ('t', 's', 'chat', 'ok') RETURNING 1", "t"))
+            run(
+                _fetch(
+                    app_url,
+                    "INSERT INTO audit_log (tenant_id, subject, action, outcome) VALUES ('t', 's', 'chat', 'ok') RETURNING 1",
+                    "t",
+                )
+            )
             assert run(_fetch(app_url, "SELECT count(*) FROM audit_log", "t")) == [(1,)]
             for denied in (
                 "UPDATE audit_log SET outcome = 'error'",
@@ -67,7 +78,13 @@ def test_app_role_has_least_privilege(conn):
             ):
                 with pytest.raises(psycopg.errors.InsufficientPrivilege):
                     run(_fetch(app_url, denied))
-            run(_fetch(app_url, f"INSERT INTO page_registry (tenant_id, doc_key, page_key, sha256, source_name, markdown) VALUES ('t', 'd', 'p', '{SHA}', 's', 'm') RETURNING 1", "t"))
+            run(
+                _fetch(
+                    app_url,
+                    f"INSERT INTO page_registry (tenant_id, doc_key, page_key, sha256, source_name, markdown) VALUES ('t', 'd', 'p', '{SHA}', 's', 'm') RETURNING 1",
+                    "t",
+                )
+            )
             run(_fetch(app_url, "DELETE FROM page_registry RETURNING 1", "t"))
 
             async def check() -> None:

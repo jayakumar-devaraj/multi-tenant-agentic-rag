@@ -12,8 +12,14 @@ pytestmark = pytest.mark.integration
 
 
 def _page(tenant: str, markdown: str, source: str = "report.pdf") -> PageIn:
-    return PageIn(tenant_id=tenant, doc_key="doc-1", page_key="page:1",
-                  sha256=hashlib.sha256(markdown.encode()).hexdigest(), source_name=source, markdown=markdown)
+    return PageIn(
+        tenant_id=tenant,
+        doc_key="doc-1",
+        page_key="page:1",
+        sha256=hashlib.sha256(markdown.encode()).hexdigest(),
+        source_name=source,
+        markdown=markdown,
+    )
 
 
 def _chunks(*texts: str) -> list[ChunkIn]:

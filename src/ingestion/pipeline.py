@@ -67,17 +67,37 @@ async def ingest_file(
     doc_key = doc_key or await find_doc_by_hashes(conn, tenant_id, hashes) or filename
     results = []
     for unit, sha in zip(units, hashes, strict=True):
-        page = PageIn(tenant_id=tenant_id, doc_key=doc_key, page_key=unit.page_key, sha256=sha,
-                      source_name=filename, markdown=normalize(unit.markdown))
+        page = PageIn(
+            tenant_id=tenant_id,
+            doc_key=doc_key,
+            page_key=unit.page_key,
+            sha256=sha,
+            source_name=filename,
+            markdown=normalize(unit.markdown),
+        )
         chunks: list[ChunkIn] = []
         if await stored_hash(conn, tenant_id, doc_key, unit.page_key) != sha:
             texts = chunk(unit.markdown)
             vectors = await embedder.embed(texts) if texts else []
             chunks = [ChunkIn(content=t, embedding=v) for t, v in zip(texts, vectors, strict=True)]
         status = await write_page(conn, page, chunks)
-        results.append(UnitResult(page_key=unit.page_key, sha256=sha, status=status,
-                                  chunks=0 if status is PageStatus.SKIPPED else len(chunks)))
+        results.append(
+            UnitResult(
+                page_key=unit.page_key,
+                sha256=sha,
+                status=status,
+                chunks=0 if status is PageStatus.SKIPPED else len(chunks),
+            )
+        )
     purged = await delete_missing_pages(conn, tenant_id, doc_key, [u.page_key for u in units])
-    log.info("file_ingested", extra={"tenant_id": tenant_id, "doc_key": doc_key, "source": filename,
-                                     "units": len(units), "purged_pages": purged})
+    log.info(
+        "file_ingested",
+        extra={
+            "tenant_id": tenant_id,
+            "doc_key": doc_key,
+            "source": filename,
+            "units": len(units),
+            "purged_pages": purged,
+        },
+    )
     return IngestResult(doc_key=doc_key, units=results, purged_pages=purged)

@@ -49,8 +49,14 @@ async def connect(tenant_id: str | None = None) -> psycopg.AsyncConnection:
 def open_pool(url: str | None = None, max_size: int = POOL_MAX_SIZE) -> AsyncConnectionPool:
     """An unopened pool of autocommit connections (the API opens it at startup); waits for a free one fail with
     `PoolTimeout`, an `OperationalError`, after CONNECT_TIMEOUT_S."""
-    return AsyncConnectionPool(url or database_url(), min_size=1, max_size=max_size, timeout=CONNECT_TIMEOUT_S,
-                               kwargs={"autocommit": True, "connect_timeout": CONNECT_TIMEOUT_S}, open=False)
+    return AsyncConnectionPool(
+        url or database_url(),
+        min_size=1,
+        max_size=max_size,
+        timeout=CONNECT_TIMEOUT_S,
+        kwargs={"autocommit": True, "connect_timeout": CONNECT_TIMEOUT_S},
+        open=False,
+    )
 
 
 @asynccontextmanager

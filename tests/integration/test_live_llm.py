@@ -37,8 +37,12 @@ def _assert_triad_scored(body: dict) -> None:
 
 
 def test_live_multitab_excel_cell_lookup(client):
-    xlsx = make_xlsx({"Ledger": [["Invoice", "Amount"]] + [[f"INV-{i:04d}", i * 10] for i in range(80)],
-                      "Vendors": [["Vendor", "Country"], ["Acme", "Canada"], ["Globex", "Peru"]]})
+    xlsx = make_xlsx(
+        {
+            "Ledger": [["Invoice", "Amount"]] + [[f"INV-{i:04d}", i * 10] for i in range(80)],
+            "Vendors": [["Vendor", "Country"], ["Acme", "Canada"], ["Globex", "Peru"]],
+        }
+    )
     assert client.post("/ingest", files={"file": ("ledger.xlsx", xlsx)}).status_code == 200
     body = client.post("/chat", json={"question": "What is the amount for invoice INV-0072?"}).json()
     print("\nSCENARIO 1:", body)
@@ -47,8 +51,10 @@ def test_live_multitab_excel_cell_lookup(client):
 
 
 def test_live_renamed_pdf_modified_row(client):
-    pages = [("Ledger page one", [["ID", "Amount"], ["INV-001", "250"]]),
-             ("Ledger page two", [["ID", "Amount"], ["INV-002", "900"]])]
+    pages = [
+        ("Ledger page one", [["ID", "Amount"], ["INV-001", "250"]]),
+        ("Ledger page two", [["ID", "Amount"], ["INV-002", "900"]]),
+    ]
     first = client.post("/ingest", files={"file": ("ledger.pdf", make_pdf(pages))}).json()
     modified = [pages[0], ("Ledger page two", [["ID", "Amount"], ["INV-002", "999"]])]
     second = client.post("/ingest", files={"file": ("ledger_FINAL_v2.pdf", make_pdf(modified))}).json()
@@ -63,8 +69,9 @@ def test_live_ambiguous_query_across_docx_and_xlsx(client):
     xlsx = make_xlsx({"Q1": [["Region", "Sales"], ["North", 100], ["South", 80]]})
     assert client.post("/ingest", files={"file": ("r.docx", make_docx())}).status_code == 200
     assert client.post("/ingest", files={"file": ("s.xlsx", xlsx)}).status_code == 200
-    body = client.post("/chat", json={
-        "question": "Compare North region sales with the Servers cost from the quarterly review budget."}).json()
+    body = client.post(
+        "/chat", json={"question": "Compare North region sales with the Servers cost from the quarterly review budget."}
+    ).json()
     print("\nSCENARIO 3:", body)
     assert not body["insufficient"]
     assert "100" in body["answer"] and "4200" in body["answer"].replace(",", "")

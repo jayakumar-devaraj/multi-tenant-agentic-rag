@@ -87,8 +87,13 @@ async def write_page(conn: psycopg.AsyncConnection, page: PageIn, chunks: list[C
             status = PageStatus.REPLACED if existing else PageStatus.INSERTED
     log.info(
         "page_written",
-        extra={"tenant_id": page.tenant_id, "doc_key": page.doc_key, "page_key": page.page_key,
-               "status": status.value, "chunks": 0 if status is PageStatus.SKIPPED else len(chunks)},
+        extra={
+            "tenant_id": page.tenant_id,
+            "doc_key": page.doc_key,
+            "page_key": page.page_key,
+            "status": status.value,
+            "chunks": 0 if status is PageStatus.SKIPPED else len(chunks),
+        },
     )
     return status
 

@@ -26,9 +26,7 @@ ORCHESTRATION = "docs/AI_ORCHESTRATION.md"
 
 def git(*args: str) -> str:
     """Run a git command at the repository root and return stdout."""
-    return subprocess.run(
-        ["git", *args], cwd=ROOT, capture_output=True, text=True, check=True
-    ).stdout
+    return subprocess.run(["git", *args], cwd=ROOT, capture_output=True, text=True, check=True).stdout
 
 
 def broken_links(tracked: set[str], md_files: list[str]) -> list[str]:
@@ -53,6 +51,7 @@ def pr_is_merged(number: str) -> bool:
             cwd=ROOT,
             capture_output=True,
             text=True,
+            check=False,
         )
         return done.returncode == 0 and done.stdout.strip() == "MERGED"
     return number in set(re.findall(r"#(\d+)\b", git("log", "--merges", "--format=%s")))
@@ -63,9 +62,7 @@ def unknown_references() -> list[str]:
     text = (ROOT / ORCHESTRATION).read_text(encoding="utf-8")
     problems = []
     for h in sorted(set(HASH.findall(text))):
-        found = subprocess.run(
-            ["git", "cat-file", "-e", f"{h}^{{commit}}"], cwd=ROOT, capture_output=True
-        )
+        found = subprocess.run(["git", "cat-file", "-e", f"{h}^{{commit}}"], cwd=ROOT, capture_output=True, check=False)
         if found.returncode != 0:
             problems.append(f"{ORCHESTRATION}: unknown commit `{h}`")
     for n in sorted(set(PR.findall(text)), key=int):

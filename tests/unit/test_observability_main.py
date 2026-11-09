@@ -11,8 +11,9 @@ from src.utils.observability import JsonFormatter, trace_callbacks
 
 
 def test_json_log_line_carries_extra_fields():
-    record = logging.makeLogRecord({"name": "audit", "levelname": "INFO", "msg": "page_written",
-                                    "tenant_id": "acme", "status": "replaced"})
+    record = logging.makeLogRecord(
+        {"name": "audit", "levelname": "INFO", "msg": "page_written", "tenant_id": "acme", "status": "replaced"}
+    )
     line = json.loads(JsonFormatter().format(record))
     assert line["event"] == "page_written" and line["tenant_id"] == "acme" and line["status"] == "replaced"
 
@@ -23,8 +24,14 @@ def test_tracing_disabled_without_langfuse_keys(monkeypatch):
     assert trace_callbacks() == []
 
 
-PROVIDER_VARS = ("GROQ_API_KEY", "GROQ_CHAT_MODEL", "OPENAI_API_KEY", "OPENAI_CHAT_MODEL",
-                 "OPENAI_EMBEDDING_MODEL", "FASTEMBED_MODEL")
+PROVIDER_VARS = (
+    "GROQ_API_KEY",
+    "GROQ_CHAT_MODEL",
+    "OPENAI_API_KEY",
+    "OPENAI_CHAT_MODEL",
+    "OPENAI_EMBEDDING_MODEL",
+    "FASTEMBED_MODEL",
+)
 
 
 def _clear_providers(monkeypatch):
@@ -76,7 +83,7 @@ def test_fallback_answers_when_primary_fails():
 
 def test_fastembed_runs_on_one_onnx_thread(monkeypatch):
     """ONNX Runtime's default of one thread per host core wastes CPU (ADR 0005); the embedder gets threads=1."""
-    import langchain_community.embeddings.fastembed as fastembed
+    from langchain_community.embeddings import fastembed
 
     from src.db.connection import EMBEDDING_DIM
     from src.main import _embeddings

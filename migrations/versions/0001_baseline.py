@@ -6,6 +6,7 @@ by running `alembic upgrade head` with no data change.
 Revision ID: 0001
 Revises:
 """
+
 from pathlib import Path
 
 from alembic import op

@@ -7,7 +7,7 @@ The count commits before the refusal is raised, so rejected calls stay counted.
 
 import os
 from dataclasses import dataclass
-from datetime import UTC, datetime, timedelta
+from datetime import datetime, timedelta
 from typing import Literal
 
 import psycopg
