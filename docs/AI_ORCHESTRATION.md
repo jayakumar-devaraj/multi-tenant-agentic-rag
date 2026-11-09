@@ -49,6 +49,13 @@ Build-process record: one row per merge. Runtime audit trail is separate (applic
 | Version 0.2.2 | files changed (by path): other 2 | chore/release-0.2.2 | #45 | b045e33f |
 | Rename the prompt files by role and make the time limit an input | files changed (by path): docs 6 | docs/rename-prompts-and-time-limit | #46 | 8c17210e |
 | Add the audit follow-ups for the RAG service | files changed (by path): docs 1 | docs/audit-followups | #47 | 8c17210e |
+| Keep refused calls counted: raise the rate limit after its transaction commits | files changed (by path): code 2, docs 3, tests 2 | fix/rate-limit-count-survives-refusal | #48 | 9fcf2ab1 |
+| Serialize a tenant's ingests so parallel ones cannot pass the document quota | files changed (by path): code 1, docs 4, tests 1 | fix/document-quota-race | #49 | 9fcf2ab1 |
+| Skip integration tests without DATABASE_URL, and count only those a default run needs | files changed (by path): docs 2, other 2, tests 1 | fix/tests-without-database | #50 | 9fcf2ab1 |
+| Add ruff check and ruff format --check to CI | files changed (by path): code 14, other 12, tests 21 | chore/ruff | #51 | 9fcf2ab1 |
+| Log PRs #44-#47 in the orchestration record | files changed (by path): docs 1 | docs/orchestration-log-44-47 | #52 | 9fcf2ab1 |
+| Pre-registered retrieval eval: recall and latency met, groundedness not run | files changed (by path): docs 1, tests 3 | docs/retrieval-eval | #53 | 9fcf2ab1 |
+| Record that the audit retention job is deferred | files changed (by path): docs 1 | docs/audit-retention-limitation | #54 | 9fcf2ab1 |
 
 
 
@@ -168,5 +175,8 @@ Docker image and compose change.
   on one ONNX Runtime thread (ADR 0005).
 - **#44–#47 (2026-11-03 to 2026-11-06):** documentation freeze, release v0.2.2, the prompt-file rename and
   the audit follow-ups.
+- **#48–#54 (2026-11-06 to 2026-11-09):** fixes from the 2026-11-03 audit (a refused call stays counted,
+  a tenant's ingests are serialized under the document quota, integration tests skip without a database),
+  ruff in CI, a pre-registered retrieval eval on a synthetic set, and the deferred audit retention job.
 - **Rename:** the eval prompt V2 row above keeps its original path as history; since #46 that file is
   `docs/prompts/evaluation-rubric-v2.md`.
