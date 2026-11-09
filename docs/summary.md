@@ -41,7 +41,7 @@ pooling, limits, the record of refused requests, metrics and release v0.2.1 from
 fails when they drift.
 
 <!-- figures:start -->
-- **Tests collected:** 149 (of which 42 need the real Postgres with pgvector); calls to real model providers are a separate, opt-in `live` set.
+- **Tests collected:** 151 (of which 41 need the real Postgres with pgvector); calls to real model providers are a separate, opt-in `live` set.
 - **Coverage:** 93 % of 1039 statements. Report header: "Coverage at 648df6f from CI run 41713944813 (all tests except live)".
 <!-- figures:end -->
 

@@ -87,7 +87,7 @@ uv run ruff check .
 uv run ruff format --check .
 ```
 
-Tests marked `integration` use the real Postgres from `docker-compose.yml`. Tests marked `live` call the real OpenAI models and are excluded by default; run them with `uv run --env-file .env pytest -m live -s` once `OPENAI_*` is set in `.env`. LLM and embedding calls in tests use labeled test doubles (`tests/conftest.py`). The last committed coverage report is `docs/coverage/coverage_report.txt`.
+Tests marked `integration` use the real Postgres from `docker-compose.yml`. Without `DATABASE_URL` they are skipped with a message saying so, and the coverage figure drops; under CI (`CI` set) they error instead of skipping. Tests marked `live` call the real OpenAI models and are excluded by default; run them with `uv run --env-file .env pytest -m live -s` once `OPENAI_*` is set in `.env`. LLM and embedding calls in tests use labeled test doubles (`tests/conftest.py`). The last committed coverage report is `docs/coverage/coverage_report.txt`.
 
 ## Deployment/CI
 
