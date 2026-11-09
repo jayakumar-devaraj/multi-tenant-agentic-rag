@@ -48,7 +48,7 @@ def figures() -> dict[str, object]:
     """All figures quoted in the summary."""
     return {
         "tests": collected(None),
-        "integration_tests": collected("integration"),
+        "integration_tests": collected("integration and not live"),
         "coverage": coverage(),
     }
 
