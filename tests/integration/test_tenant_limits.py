@@ -4,13 +4,14 @@ import asyncio
 import sys
 from datetime import UTC, datetime, timedelta
 
+import httpx
 import pytest
 from fastapi.testclient import TestClient
 
 from src.agents.synthesis import SufficiencyVerdict
 from src.db.connection import connect, run
 from src.routers.api import Services, create_app
-from src.utils.limits import RateLimited, take
+from src.utils.limits import RateLimited, enforce, take
 from tests.conftest import FakeEmbedder, ScriptedLLM, make_docx, make_xlsx
 
 pytestmark = pytest.mark.integration
@@ -29,7 +30,8 @@ def _take_n(tenant: str, n: int, limit: int, now: datetime) -> list[int | None]:
             for _ in range(n):
                 try:
                     async with conn.transaction():
-                        await take(conn, tenant, "query", limit, now)
+                        count = await take(conn, tenant, "query", now)
+                    enforce("query", count, limit, now)
                     out.append(None)
                 except RateLimited as exc:
                     out.append(exc.retry_after_s)
@@ -63,6 +65,43 @@ def test_retrieve_over_the_limit_is_429_with_retry_after_and_audited(monkeypatch
         assert audit[0]["detail"] == {"reason": "rate_limited"}
 
 
+def test_refused_calls_stay_counted_after_the_request_ends(monkeypatch, tenant):
+    limit = 2
+    monkeypatch.setenv("TENANT_TOKENS", f"tok-a:{tenant}")
+    monkeypatch.setenv("RATE_LIMIT_QUERY_PER_MIN", str(limit))
+    a = {"Authorization": "Bearer tok-a"}
+    lean = ScriptedLLM(SufficiencyVerdict=[SufficiencyVerdict(sufficient=True)] * limit)
+    fixed_now = datetime.now(UTC).replace(second=1, microsecond=0)
+
+    class FrozenDatetime(datetime):
+        """Keep every call in one window, so a minute boundary cannot split the count."""
+
+        @classmethod
+        def now(cls, tz=None):
+            return fixed_now
+
+    monkeypatch.setattr("src.routers.api.datetime", FrozenDatetime)
+
+    with TestClient(create_app(Services(embedder=FakeEmbedder(), llm=ScriptedLLM(), triad=None,
+                                        retrieve_llm=lean))) as client:
+        responses = [client.post("/v1/retrieve", json={"question": "q"}, headers=a) for _ in range(limit + 3)]
+        assert [r.status_code for r in responses] == [200] * limit + [429] * 3
+        assert all(1 <= int(r.headers["Retry-After"]) <= 60 for r in responses[limit:])
+        audit = client.get("/audit", params={"action": "retrieve"}, headers=a).json()["entries"]
+        assert [e["outcome"] for e in audit] == ["denied"] * 3 + ["ok"] * limit
+        assert all(e["detail"] == {"reason": "rate_limited"} for e in audit[:3])
+
+    async def stored() -> list[tuple[str, int]]:
+        conn = await connect(tenant)
+        try:
+            cur = await conn.execute("SELECT action, count FROM tenant_usage WHERE tenant_id = %s", (tenant,))
+            return await cur.fetchall()
+        finally:
+            await conn.close()
+
+    assert run(stored()) == [("query", limit + 3)]
+
+
 def test_a_new_document_past_the_quota_is_refused_and_rolled_back(monkeypatch, tenant):
     monkeypatch.setenv("TENANT_TOKENS", f"tok-a:{tenant}")
     monkeypatch.setenv("TENANT_MAX_DOCUMENTS", "1")
@@ -90,3 +129,47 @@ def test_a_new_document_past_the_quota_is_refused_and_rolled_back(monkeypatch, t
             await conn.close()
 
     assert run(held()) == 1  # the refused document left nothing behind
+
+
+class _SlowEmbedder(FakeEmbedder):
+    """TEST DOUBLE: holds each ingest's transaction open long enough for parallel ingests to overlap."""
+
+    async def embed(self, texts: list[str]) -> list[list[float]]:
+        await asyncio.sleep(0.3)
+        return await super().embed(texts)
+
+
+def test_parallel_ingests_at_the_cap_never_exceed_the_quota(monkeypatch, tenant):
+    cap, parallel = 2, 6
+    monkeypatch.setenv("TENANT_TOKENS", f"tok-a:{tenant}")
+    monkeypatch.setenv("TENANT_MAX_DOCUMENTS", str(cap))
+    monkeypatch.setenv("RATE_LIMIT_INGEST_PER_MIN", "100")
+    a = {"Authorization": "Bearer tok-a"}
+    app = create_app(Services(embedder=_SlowEmbedder(), llm=ScriptedLLM(), triad=None))
+
+    async def go() -> tuple[list[int], int]:
+        # One event loop and asyncio.gather: TestClient from threads did not overlap the requests.
+        async with app.router.lifespan_context(app), httpx.AsyncClient(
+            transport=httpx.ASGITransport(app=app), base_url="http://test", timeout=60
+        ) as client:
+
+            async def upload(name: str) -> int:
+                body = f"Distinct content of {name}.".encode()
+                return (await client.post("/ingest", files={"file": (f"{name}.txt", body)}, headers=a)).status_code
+
+            assert await upload("first") == 200  # one document held, room for exactly one more
+            statuses = await asyncio.gather(*(upload(f"doc-{i}") for i in range(parallel)))
+        conn = await connect(tenant)
+        try:
+            row = await (
+                await conn.execute(
+                    "SELECT count(DISTINCT doc_key) FROM page_registry WHERE tenant_id = %s", (tenant,)
+                )
+            ).fetchone()
+            return list(statuses), row[0]
+        finally:
+            await conn.close()
+
+    statuses, held = run(go())
+    assert held == cap
+    assert sorted(statuses) == [200] + [429] * (parallel - 1)

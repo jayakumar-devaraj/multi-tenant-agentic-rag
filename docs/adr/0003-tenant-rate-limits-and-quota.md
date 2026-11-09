@@ -13,19 +13,22 @@ fill the shared database.
   `Retry-After` (seconds to the next window).
 - **Counters in Postgres** (`tenant_usage`, migration 0004), so every replica enforces one limit. A call
   increments its tenant's row for the current one-minute window with one atomic upsert, in its own committed
-  transaction, before any work: refused calls count too, and the work's rollback cannot undo the count.
-  The row is protected by the same row-level security as the documents.
+  transaction, before any work. The refusal is raised only after that commit, so refused calls stay counted,
+  and the work's rollback cannot undo the count. The row is protected by the same row-level security as the documents.
 - **Document quota:** `TENANT_MAX_DOCUMENTS` (default 1000) distinct documents. It is checked inside the
   ingest transaction after the document key is resolved, so a new document past the quota is 429 (no
   `Retry-After`) and rolls back with nothing stored; re-ingesting a document the tenant already holds is
-  always allowed.
+  always allowed. The transaction first takes `pg_advisory_xact_lock(hashtext(tenant_id))`, so a tenant's
+  ingests run one at a time and parallel ingests cannot pass the check together.
 - Refusals are audited with outcome `denied` and `detail.reason` `rate_limited` or `document_quota`.
 - A limit below 1 fails startup.
 
 ## Consequences
 - One extra short transaction per call. Fixed windows allow up to twice the limit across a window boundary.
-- Two concurrent ingests can both pass the quota check, so a tenant can exceed it by the number of
-  concurrent ingests.
+- An ingest waiting for the lock holds a pooled connection, and parallel ingests by one tenant wait for each
+  other's embedding. When they fill the pool (`POOL_MAX_SIZE`) and one ingest takes longer than the pool's
+  wait (`CONNECT_TIMEOUT_S`), other tenants get 503; `RATE_LIMIT_INGEST_PER_MIN` bounds how many one tenant
+  can start. Two tenants whose ids hash alike also share a lock, which only makes them wait.
 - Limits are the same for every tenant; per-tenant overrides and token-bucket smoothing are not built.
 - Consumers see a new status on `/v1/retrieve`; the chatbot treats an unexpected status as a final
   `rag_error`, so a limited tenant gets "try again later" rather than a retry storm.

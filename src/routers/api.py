@@ -6,6 +6,7 @@ import logging
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
+from datetime import UTC, datetime
 from typing import Annotated, Any
 
 import groq
@@ -22,7 +23,7 @@ from src.ingestion.pipeline import Embedder, IngestResult, ingest_file
 from src.ingestion.workers import UnsupportedFormatError, worker_for
 from src.orchestration.graph import build_graph
 from src.retrieval.hybrid import ParentSection, retrieve
-from src.utils.limits import Limits, QuotaExceeded, RateLimited, documents_held, take
+from src.utils.limits import Limits, QuotaExceeded, RateLimited, documents_held, enforce, take
 from src.utils.metrics import MetricsMiddleware
 from src.utils.auth import (
     SCOPE_INGEST,
@@ -186,12 +187,15 @@ async def _tenant_tx(request: Request, tenant_id: str) -> AsyncIterator[psycopg.
 
 
 async def _rate_limit(request: Request, session: Session, bucket: str, action: Action) -> None:
-    """Count this call against the tenant's per-minute limit, in its own committed transaction, so rejected
-    calls count too; over the limit is 429 with Retry-After and an audit row with outcome `denied`."""
+    """Count this call against the tenant's per-minute limit in its own transaction, and refuse only after that
+    commits, so rejected calls stay counted; over the limit is 429 with Retry-After and an audit row with outcome
+    `denied`."""
     limits: Limits = request.app.state.limits
+    now = datetime.now(UTC)
     try:
         async with _tenant_tx(request, session.tenant_id) as conn:
-            await take(conn, session.tenant_id, bucket, limits.per_min(bucket))  # type: ignore[arg-type]
+            count = await take(conn, session.tenant_id, bucket, now)  # type: ignore[arg-type]
+        enforce(bucket, count, limits.per_min(bucket), now)  # type: ignore[arg-type]
     except RateLimited as exc:
         await _audit_denied(request, session, action, "rate_limited")
         raise HTTPException(429, str(exc), headers={"Retry-After": str(exc.retry_after_s)}) from exc
@@ -236,8 +240,10 @@ async def ingest(request: Request, file: UploadFile, session: Annotated[Session,
     max_documents = request.app.state.limits.max_documents
     try:
         # One transaction: the document's pages and its audit row commit or roll back together, and a new
-        # document that takes the tenant past its quota rolls back with them.
+        # document that takes the tenant past its quota rolls back with them. The lock makes the tenant's ingests
+        # run one at a time, so a parallel ingest cannot pass the check on a count that misses this document.
         async with _tenant_tx(request, session.tenant_id) as conn:
+            await conn.execute("SELECT pg_advisory_xact_lock(hashtext(%s))", (session.tenant_id,))
             held = await documents_held(conn, session.tenant_id)
             result = await ingest_file(conn, services.embedder, session.tenant_id, filename, data)
             after = await documents_held(conn, session.tenant_id)
