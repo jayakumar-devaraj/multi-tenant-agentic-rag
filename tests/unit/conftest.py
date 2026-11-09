@@ -8,7 +8,7 @@ import pytest
 
 @pytest.fixture(autouse=True)
 def _no_rate_limit_counter(monkeypatch: pytest.MonkeyPatch) -> None:
-    async def take(*args: object, **kwargs: object) -> None:
-        return None
+    async def take(*args: object, **kwargs: object) -> int:
+        return 0
 
     monkeypatch.setattr("src.routers.api.take", take)
